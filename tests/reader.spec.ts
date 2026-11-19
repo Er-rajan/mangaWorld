@@ -62,7 +62,16 @@ test("Rajan Chapter 1 opens page by page and includes all ten PDF pages in order
   });
   await page.goto(site);
   const hero = page.locator(".hero");
-  await hero.getByRole("link", { name: "Start reading" }).click();
+  const backdrop = "/manga/rajan-the-thor-curse/backdrop.webp";
+  await expect(hero.locator(".hero-art")).toHaveAttribute("src", backdrop);
+  await expect(hero.getByRole("link", { name: "Start reading" })).toBeVisible();
+  await hero.getByRole("link", { name: "Series details" }).click();
+  await expect(page.locator(".detail-backdrop")).toHaveAttribute("src", backdrop);
+  expect(await page.locator(".detail-backdrop").evaluate(async (image: HTMLImageElement) => {
+    await image.decode();
+    return image.naturalWidth;
+  })).toBeGreaterThan(0);
+  await page.getByRole("link", { name: "Start reading" }).click();
   await expect(page.getByRole("heading", { name: "The Forbidden Temple", level: 1 })).toBeVisible();
   await expect(page.locator(".reader-layout")).toHaveClass(/single/);
   const next = page.getByRole("button", { name: "Next page", exact: true });

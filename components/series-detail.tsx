@@ -18,9 +18,11 @@ export function SeriesDetail({ series, today }: { series: Series; today: number 
   const latest = byDate.at(-1);
   const chapters = newest ? byDate.reverse() : byDate;
   const upcoming = upcomingDrownedCityChapter(series);
+  const showCover = !series.hero || Boolean(series.cover_id);
   return <main id="main" className="site-width detail-page">
-    <section className={`detail-hero${series.slug === drownedCitySlug ? " drowned-city-hero" : ""}`}>
-      <Art id={series.cover_id} eager full className="detail-cover" />
+    <section className={`detail-hero${series.slug === drownedCitySlug ? " drowned-city-hero" : ""}${series.hero ? " detail-hero-with-art" : ""}${showCover ? "" : " detail-hero-no-cover"}`}>
+      {series.hero && <img className="detail-backdrop" src={series.hero} alt="" fetchPriority="high" />}
+      {showCover && <Art id={series.cover_id} eager full className="detail-cover" />}
       <div className="detail-copy">
         <SeriesStatus series={series} />
         <h1>{series.title}</h1>

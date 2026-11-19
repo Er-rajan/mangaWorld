@@ -17,9 +17,11 @@ export function SeriesStatus({ series }: { series: Series }) {
 
 export function SeriesCard({ series }: { series: Series }) {
   const count = series.chapters.length;
+  const artwork = series.cover_id ? artUrl(series.cover_id) : series.hero;
   return <Link href={seriesLink(series)} className="series-card">
-    <div className={`card-art${series.cover_id ? "" : " card-without-cover"}`}>
-      {series.cover_id ? <Art id={series.cover_id} /> : <BookOpen className="card-illustration" size={98} strokeWidth={.85} aria-hidden="true" />}
+    <div className={`card-art${artwork ? "" : " card-without-cover"}`}>
+      {artwork ? <img src={artwork} alt="" loading="lazy" decoding="async" />
+        : <BookOpen className="card-illustration" size={98} strokeWidth={.85} aria-hidden="true" />}
       <SeriesStatus series={series} />
       <div className="card-title"><h3>{series.title}</h3>{series.tags.length > 0 && <p>{series.tags.slice(0, 3).join(" · ")}</p>}</div>
     </div>
@@ -92,7 +94,8 @@ export function BrowseLibrary({ series, today }: { series: Series[]; today: numb
 export function Hero({ series }: { series?: Series }) {
   const first = series?.chapters[0];
   const customArtwork = series?.hero ?? (series?.cover_id ? artUrl(series.cover_id, "full") : undefined);
-  return <section className={`hero${customArtwork ? "" : " hero-world"}`} aria-labelledby="hero-title">
+  const heroStyle = series?.hero ? "hero hero-series-art" : customArtwork ? "hero" : "hero hero-world";
+  return <section className={heroStyle} aria-labelledby="hero-title">
     <img className={`hero-art${series?.cover_id && !series.hero ? " cover-hero" : ""}`} src={customArtwork ?? siteBanner} alt="" fetchPriority="high" />
     <div className="hero-content">
       <div className="hero-eyebrow"><span className="hero-dot" />{series ? "Featured manga" : "Independent manga library"}</div>

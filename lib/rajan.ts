@@ -1,6 +1,7 @@
 import type { Chapter } from "./types";
 
 export const rajanSlug = "rajan-the-thor-curse";
+export const rajanBackdrop = `/manga/${rajanSlug}/backdrop.webp`;
 
 const pages = [
   "Rajan and his classmates talk outside school at the end of the day.",
