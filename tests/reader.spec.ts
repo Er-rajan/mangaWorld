@@ -54,6 +54,38 @@ test("Manga World branding, author, footer Instagram and persistent themes", asy
   expect(manifest.name).toBe("Manga World");
 });
 
+test("Rajan Chapter 1 opens page by page and includes all ten PDF pages in order", async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem("nightfolio:prefs", JSON.stringify({
+      mode: "vertical", direction: "rtl", zoom: 100, brightness: 100, background: "ink",
+    }));
+  });
+  await page.goto(site);
+  const hero = page.locator(".hero");
+  await hero.getByRole("link", { name: "Start reading" }).click();
+  await expect(page.getByRole("heading", { name: "The Forbidden Temple", level: 1 })).toBeVisible();
+  await expect(page.locator(".reader-layout")).toHaveClass(/single/);
+  const next = page.getByRole("button", { name: "Next page", exact: true });
+  const image = page.locator(".manga-page img");
+  const counter = page.locator(".reader-count");
+  for (let number = 1; number <= 10; number++) {
+    await expect(counter).toHaveText(`${number} / 10`);
+    await expect(image).toHaveCount(1);
+    await expect(image).toHaveAttribute("src", `/manga/rajan-the-thor-curse/chapter-1/page-${String(number).padStart(2, "0")}.webp`);
+    expect(await image.evaluate(async (artwork: HTMLImageElement) => {
+      await artwork.decode();
+      return artwork.naturalWidth;
+    })).toBe(1024);
+    if (number === 1) await page.keyboard.press("ArrowRight");
+    else if (number < 10) await next.click();
+  }
+  await expect(next).toBeDisabled();
+  await page.keyboard.press("ArrowLeft");
+  await expect(counter).toHaveText("9 / 10");
+  await page.reload();
+  await expect(counter).toHaveText("9 / 10");
+});
+
 test("invalid Supabase credentials leave the bundled catalogue and reader available", async ({ page, request }) => {
   const invalidKeySite = "http://127.0.0.1:3213";
   const home = await page.goto(invalidKeySite);

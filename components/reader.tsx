@@ -4,13 +4,13 @@ import { Bookmark, BookOpen, ChevronLeft, ChevronRight, Clock3, Download, Expand
 import { useCallback, useEffect, useRef, useState } from "react";
 import { artUrl, numberLabel } from "@/lib/format";
 import { getLocal, rememberProgress, setLocal, useLocal, type ReaderPrefs, type SavedPage } from "@/lib/local";
-import type { Chapter, Direction, PageArt, ReaderMode } from "@/lib/types";
+import type { Chapter, Direction, PageArt, ReaderLayout, ReaderMode } from "@/lib/types";
 import { ThemePicker } from "./theme";
 import { ReaderSocial, type Comments } from "./reader-social";
 import { useOfflineChapter } from "./offline";
 
 type Props = { series: string; seriesUrl: string; path: string; chapter: Chapter; next?: string; prev?: string;
-  upcoming?: number; reactionsAvailable: boolean; watermark: string; comments?: Comments };
+  upcoming?: number; reactionsAvailable: boolean; watermark: string; comments?: Comments; defaultLayout?: ReaderLayout };
 
 const backgrounds = { ink: "#0c0b10", gray: "#323039", paper: "#dfd9d2" };
 
@@ -23,14 +23,16 @@ function ChapterNav({ prev, next, seriesUrl, upcoming }: Pick<Props, "prev" | "n
   </nav>;
 }
 
-export function Reader({ series, seriesUrl, path, chapter, next, prev, upcoming, reactionsAvailable, watermark, comments }: Props) {
+export function Reader({ series, seriesUrl, path, chapter, next, prev, upcoming, reactionsAvailable, watermark, comments, defaultLayout }: Props) {
   const total = chapter.pages.length;
   const minimum = chapter.cover_id ? 0 : 1;
   const prefs = useLocal("prefs");
+  const seriesLayouts = useLocal("seriesLayouts");
+  const layout = defaultLayout ? seriesLayouts[seriesUrl] ?? defaultLayout : prefs;
   const bookmarks = useLocal("bookmarks");
   const [desktop, setDesktop] = useState(false);
-  const mode = !desktop && prefs.mode === "spread" ? "single" : prefs.mode;
-  const rtl = prefs.direction !== "ltr";
+  const mode = !desktop && layout.mode === "spread" ? "single" : layout.mode;
+  const rtl = layout.direction !== "ltr";
   const [page, setPage] = useState(minimum);
   const [ready, setReady] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
@@ -65,11 +67,12 @@ export function Reader({ series, seriesUrl, path, chapter, next, prev, upcoming,
     const stored = getLocal("progress")[path]?.page;
     const wanted = query && /^\d+$/.test(query) ? Number(query) : stored ?? minimum;
     const index = clamp(wanted);
-    const savedMode = getLocal("prefs").mode;
+    const savedMode = defaultLayout
+      ? (getLocal("seriesLayouts")[seriesUrl] ?? defaultLayout).mode : getLocal("prefs").mode;
     setPage(index);
     setReady(true);
     if (savedMode === "vertical" && index > minimum) requestAnimationFrame(() => scrollToPage(index));
-  }, [path, minimum, clamp, scrollToPage]);
+  }, [path, minimum, clamp, scrollToPage, defaultLayout, seriesUrl]);
 
   useEffect(() => {
     const media = window.matchMedia("(min-width: 850px)");
@@ -174,14 +177,20 @@ export function Reader({ series, seriesUrl, path, chapter, next, prev, upcoming,
     setLocal("prefs", { ...getLocal("prefs"), ...change });
   }
 
+  function changeLayout(next: ReaderLayout) {
+    if (defaultLayout) setLocal("seriesLayouts", { ...getLocal("seriesLayouts"), [seriesUrl]: next });
+    else changePrefs(next);
+  }
+
   function changeMode(next: ReaderMode, direction?: Direction) {
-    changePrefs({ mode: next, direction: direction ?? (next === "vertical" ? "vertical" : prefs.direction === "vertical" ? "rtl" : prefs.direction) });
+    const horizontal = layout.direction === "vertical" ? defaultLayout?.direction ?? "rtl" : layout.direction;
+    changeLayout({ mode: next, direction: direction ?? (next === "vertical" ? "vertical" : horizontal) });
   }
 
   function changeDirection(next: Direction) {
     if (next === "vertical") changeMode("vertical", next);
     else if (mode === "vertical") changeMode("single", next);
-    else changePrefs({ direction: next });
+    else changeLayout({ mode: layout.mode, direction: next });
   }
 
   function bookmark() {

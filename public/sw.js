@@ -21,7 +21,7 @@ function isChapter(url) {
 }
 
 function isArtwork(url) {
-  return /^(?:\/api\/art\/[a-f0-9-]+\/(?:full|thumb)|\/manga\/[a-z0-9-]+\/(?:cover|page-\d+)\.webp)$/.test(url.pathname);
+  return /^(?:\/api\/art\/[a-f0-9-]+\/(?:full|thumb)|\/manga\/[a-z0-9-]+\/(?:chapter-[a-z0-9-]+\/)?(?:cover|page-\d+)\.webp)$/.test(url.pathname);
 }
 
 function isBundle(url) {

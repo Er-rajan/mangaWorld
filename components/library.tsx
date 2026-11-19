@@ -31,7 +31,7 @@ export function ChapterRow({ series, chapter, libraryRow = false, recent = false
   series: Series; chapter: ChapterSummary; libraryRow?: boolean; recent?: boolean;
 }) {
   return <Link prefetch={false} className="chapter-row" href={chapterLink(series, chapter)}>
-    <Art id={chapterArt(series, chapter)} />
+    <Art id={chapter.thumbnail_id ?? chapterArt(series, chapter)} />
     <div className="chapter-row-text">
       <div className="chapter-kicker">{libraryRow ? series.title : `Chapter ${numberLabel(chapter.number)}`}</div>
       <h3>{chapter.title}</h3>

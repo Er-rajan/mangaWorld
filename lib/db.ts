@@ -2,7 +2,7 @@ import "server-only";
 import { createClient } from "@supabase/supabase-js";
 import { cache } from "react";
 import { defaultSettings, starterLibrary } from "./starter";
-import { drownedCityChapter, isBundledDrownedCityChapter, restoreDrownedCity } from "./drowned-city";
+import { bundledChapter, includeBundledChapter } from "./bundled-chapters";
 import type { Chapter, ChapterSummary, Library, PageArt, Series, Settings } from "./types";
 
 const url = process.env.SUPABASE_URL?.trim();
@@ -63,7 +63,7 @@ async function loadCatalogue(admin: boolean): Promise<Library> {
     return { ...starterLibrary, settings: currentSettings };
   }
   const catalogue = series.map((row) => ({ ...row, chapters: grouped.get(row.id) ?? [] })) as Series[];
-  return { series: admin ? catalogue : catalogue.map(restoreDrownedCity), settings: currentSettings, demo: false };
+  return { series: admin ? catalogue : catalogue.map(includeBundledChapter), settings: currentSettings, demo: false };
 }
 
 export const library = cache(async (admin = false): Promise<Library> => {
@@ -82,7 +82,8 @@ export const getChapter = cache(async (slug: string, id: string, admin = false):
   const data = await library(admin);
   const summary = data.series.find((series) => series.slug === slug)?.chapters.find((chapter) => chapter.id === id);
   if (!summary) return undefined;
-  if (!admin && isBundledDrownedCityChapter(slug, id)) return { ...summary, pages: drownedCityChapter.pages };
+  const bundled = !admin && bundledChapter(slug, id);
+  if (bundled) return { ...summary, pages: bundled.pages };
   if (data.demo) return undefined;
   const pages = ensure(await database(admin).from("chapter_pages").select("asset_id,width,height,filename,alt")
     .eq("chapter_id", id).order("position"), "reading chapter pages") as PageArt[];

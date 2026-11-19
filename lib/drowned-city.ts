@@ -19,18 +19,6 @@ export const drownedCityChapter: Chapter = {
   likes: 0, views: 0, first_page: pages[0].asset_id, pages,
 };
 
-export function isBundledDrownedCityChapter(slug: string, id: string) {
-  return slug === drownedCitySlug && id === drownedCityChapter.id;
-}
-
-export function restoreDrownedCity(series: Series): Series {
-  if (series.slug !== drownedCitySlug) return series;
-  const { pages: _pages, ...chapter } = drownedCityChapter;
-  const chapters = series.chapters.some((entry) => entry.number === chapter.number) ? series.chapters
-    : [{ ...chapter, series_id: series.id }, ...series.chapters].sort((a, b) => a.number - b.number);
-  return { ...series, cover_id: series.cover_id ?? cover, chapters };
-}
-
 export function upcomingDrownedCityChapter(series: Series) {
   return series.slug === drownedCitySlug && series.status === "ongoing" && !series.chapters.some((entry) => entry.number >= 2)
     ? 2 : undefined;

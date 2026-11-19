@@ -1,13 +1,13 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
-import type { Direction, ReaderMode } from "./types";
+import type { ReaderLayout } from "./types";
 import { defaultTheme, resolveTheme, themeStorageKey, type Theme } from "./themes";
 
 export type SavedPage = {
   path: string; series: string; chapter: string; page: number; total: number; updated: number;
 };
-export type ReaderPrefs = { mode: ReaderMode; direction: Direction; zoom: number; brightness: number; background: "ink" | "paper" | "gray" };
+export type ReaderPrefs = ReaderLayout & { zoom: number; brightness: number; background: "ink" | "paper" | "gray" };
 export const defaultReader: ReaderPrefs = { mode: "vertical", direction: "rtl", zoom: 100, brightness: 100, background: "ink" };
 
 type LocalValues = {
@@ -16,10 +16,12 @@ type LocalValues = {
   progress: Record<string, SavedPage>;
   bookmarks: SavedPage[];
   prefs: ReaderPrefs;
+  seriesLayouts: Record<string, ReaderLayout>;
   visitor: string;
   likes: string[];
 };
-const defaults: LocalValues = { theme: defaultTheme, follows: [], progress: {}, bookmarks: [], prefs: defaultReader, visitor: "", likes: [] };
+const defaults: LocalValues = { theme: defaultTheme, follows: [], progress: {}, bookmarks: [], prefs: defaultReader,
+  seriesLayouts: {}, visitor: "", likes: [] };
 const data = new Map<string, { raw: string | null; value: unknown }>();
 const prefix = "nightfolio:";
 const changed = "nightfolio-local";

@@ -21,7 +21,7 @@ export function isNew(date: string, now = Date.now()) {
 }
 
 export function shortDate(date: string) {
-  return new Intl.DateTimeFormat("en", { month: "short", day: "numeric", timeZone: "UTC" }).format(new Date(date));
+  return new Intl.DateTimeFormat("en", { month: "short", day: "numeric", timeZone: "Asia/Kolkata" }).format(new Date(date));
 }
 
 export function numberLabel(value: number) {

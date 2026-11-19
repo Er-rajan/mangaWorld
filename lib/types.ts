@@ -33,6 +33,7 @@ export type ChapterSummary = {
   likes: number;
   views: number;
   first_page: string | null;
+  thumbnail_id?: string;
 };
 
 export type Chapter = ChapterSummary & { pages: PageArt[] };
@@ -42,3 +43,4 @@ export type Library = { series: Series[]; settings: Settings; demo: boolean; una
 
 export type ReaderMode = "vertical" | "single" | "spread";
 export type Direction = "ltr" | "rtl" | "vertical";
+export type ReaderLayout = { mode: ReaderMode; direction: Direction };
