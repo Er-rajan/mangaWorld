@@ -25,6 +25,27 @@ test("starter catalogue features Rajan and keeps The Drowned City coming soon", 
   expect((await request.get(starter + "/read/below-the-tide/chapter-1")).status()).toBe(404);
 });
 
+test("Manga World branding, author, footer Instagram and persistent themes", async ({ page, request }) => {
+  const starter = "http://127.0.0.1:3210";
+  await page.goto(starter);
+  await expect(page).toHaveTitle(/Manga World/);
+  await expect(page.locator("header").getByRole("link", { name: "Manga World home" })).toBeVisible();
+  await expect(page.locator("footer").getByRole("link", { name: "@ur.rajan" }))
+    .toHaveAttribute("href", "https://www.instagram.com/ur.rajan/");
+  const picker = page.getByRole("combobox", { name: "Site theme" });
+  for (const theme of ["sakura", "ink", "light", "dark", "sakura"]) {
+    await picker.selectOption(theme);
+    await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
+  }
+  await page.reload();
+  await expect(picker).toHaveValue("sakura");
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "sakura");
+  await page.locator("footer").getByRole("link", { name: "About the author" }).click();
+  await expect(page.getByRole("heading", { name: "Rajan", exact: true })).toBeVisible();
+  const manifest = await (await request.get(starter + "/manifest.webmanifest")).json();
+  expect(manifest.name).toBe("Manga World");
+});
+
 test("library search, tags, chapter sort and cover fallbacks", async ({ page }) => {
   await page.goto(site);
   await page.getByRole("button", { name: "Sci-fi", exact: true }).click();
@@ -85,7 +106,7 @@ test("small-screen layout, tap zones and swipe", async ({ browser }) => {
   const context = await browser.newContext({ ...devices["Pixel 7"] });
   try {
     const page = await context.newPage();
-    await page.goto(site);
+    await page.goto("http://127.0.0.1:3210");
     await expect(page.getByRole("heading", { name: "Browse series" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Search manga", exact: true })).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(devices["Pixel 7"].viewport.width);

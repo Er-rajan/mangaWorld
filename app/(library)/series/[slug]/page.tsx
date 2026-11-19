@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { SeriesDetail } from "@/components/series-detail";
 import { library } from "@/lib/db";
 import { artUrl, seriesLink } from "@/lib/format";
+import { siteName } from "@/lib/brand";
 
 type Props = { params: Promise<{ slug: string }> };
 export const dynamic = "force-dynamic";
@@ -12,7 +13,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const series = (await library()).series.find((entry) => entry.slug === slug);
   if (!series) return {};
   const { title } = series;
-  const description = series.description || (series.chapters.length ? `Read ${title} on Nightfolio.` : "Chapters coming soon.");
+  const description = series.description || (series.chapters.length ? `Read ${title} on ${siteName}.` : "Chapters coming soon.");
   return { title, description, alternates: { canonical: seriesLink(series) },
     openGraph: { title, description, images: [{ url: artUrl(series.cover_id, "full"), alt: `${title} cover` }] } };
 }

@@ -1,7 +1,8 @@
 import type { Library, Settings } from "./types";
+import { authorName } from "./brand";
 
 export const featuredSlug = "rajan-the-thor-curse";
-export const defaultSettings: Settings = { author: "", about: "", watermark: false, comments: false, characters: [] };
+export const defaultSettings: Settings = { author: authorName, about: "", watermark: false, comments: false, characters: [] };
 
 export const starterLibrary: Library = {
   demo: true,

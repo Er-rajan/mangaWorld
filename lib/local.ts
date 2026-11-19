@@ -2,6 +2,7 @@
 
 import { useSyncExternalStore } from "react";
 import type { Direction, ReaderMode } from "./types";
+import { defaultTheme, resolveTheme, themeStorageKey, type Theme } from "./themes";
 
 export type SavedPage = {
   path: string; series: string; chapter: string; page: number; total: number; updated: number;
@@ -10,7 +11,7 @@ export type ReaderPrefs = { mode: ReaderMode; direction: Direction; zoom: number
 export const defaultReader: ReaderPrefs = { mode: "vertical", direction: "rtl", zoom: 100, brightness: 100, background: "ink" };
 
 type LocalValues = {
-  theme: "dark" | "light";
+  theme: Theme;
   follows: string[];
   progress: Record<string, SavedPage>;
   bookmarks: SavedPage[];
@@ -18,7 +19,7 @@ type LocalValues = {
   visitor: string;
   likes: string[];
 };
-const defaults: LocalValues = { theme: "dark", follows: [], progress: {}, bookmarks: [], prefs: defaultReader, visitor: "", likes: [] };
+const defaults: LocalValues = { theme: defaultTheme, follows: [], progress: {}, bookmarks: [], prefs: defaultReader, visitor: "", likes: [] };
 const data = new Map<string, { raw: string | null; value: unknown }>();
 const prefix = "nightfolio:";
 const changed = "nightfolio-local";
@@ -31,10 +32,10 @@ function subscribe(callback: () => void) {
 
 export function getLocal<K extends keyof LocalValues>(key: K): LocalValues[K] {
   try {
-    const raw = window.localStorage.getItem(prefix + key);
+    const raw = window.localStorage.getItem(key === "theme" ? themeStorageKey : prefix + key);
     const cached = data.get(key);
     if (cached !== undefined && cached.raw === raw) return cached.value as LocalValues[K];
-    const value = raw === null ? defaults[key] : key === "theme" ? (raw === "light" ? "light" : "dark") : JSON.parse(raw);
+    const value = raw === null ? defaults[key] : key === "theme" ? resolveTheme(raw) : JSON.parse(raw);
     data.set(key, { raw, value });
     return value;
   } catch {
@@ -45,7 +46,7 @@ export function getLocal<K extends keyof LocalValues>(key: K): LocalValues[K] {
 export function setLocal<K extends keyof LocalValues>(key: K, value: LocalValues[K]) {
   const raw = key === "theme" ? String(value) : JSON.stringify(value);
   data.set(key, { raw, value });
-  try { window.localStorage.setItem(prefix + key, raw); } catch { /* Keep the setting for this tab. */ }
+  try { window.localStorage.setItem(key === "theme" ? themeStorageKey : prefix + key, raw); } catch { /* Keep the setting for this tab. */ }
   window.dispatchEvent(new Event(changed));
 }
 

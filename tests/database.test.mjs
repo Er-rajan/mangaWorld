@@ -16,6 +16,8 @@ test("migration applies and schedules release, with draft metadata and art prote
     await db.exec(seed);
     const titles = await reader("select title from public.series order by title");
     assert.deepEqual(titles.rows.map(({ title }) => title), ["Rajan: The Thor Curse", "The Drowned City"]);
+    const settings = await reader("select author from public.site_settings");
+    assert.equal(settings.rows[0].author, "Rajan");
     const bucket = await db.query("select public, allowed_mime_types from storage.buckets where id = 'manga-art'");
     assert.deepEqual(bucket.rows, [{ public: false, allowed_mime_types: ["image/webp"] }]);
     const series = (await admin("select public.save_series($1, null, 0) as id", [{

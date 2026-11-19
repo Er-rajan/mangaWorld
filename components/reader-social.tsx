@@ -4,6 +4,7 @@ import Giscus from "@giscus/react";
 import { Copy, Eye, Heart, MessageCircle, Share2, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { getLocal, setLocal, useLocal, visitorId } from "@/lib/local";
+import { themes } from "@/lib/themes";
 
 export type Comments = { repo: string; repoId: string; category: string; categoryId: string };
 
@@ -82,7 +83,7 @@ export function ReaderSocial({ id, path, title, comments, initial }: {
     </dialog>
     {comments && <details className="comments"><summary><MessageCircle size={19} /> Comments</summary>
       <Giscus repo={comments.repo as `${string}/${string}`} repoId={comments.repoId} category={comments.category}
-        categoryId={comments.categoryId} mapping="pathname" strict="1" reactionsEnabled="0" loading="lazy" theme={theme} />
+        categoryId={comments.categoryId} mapping="pathname" strict="1" reactionsEnabled="0" loading="lazy" theme={themes[theme].light ? "light" : "dark"} />
     </details>}
   </>;
 }

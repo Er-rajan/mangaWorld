@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { Reader } from "@/components/reader";
 import { artUrl, chapterArt, chapterLink } from "@/lib/format";
 import { getChapter, library } from "@/lib/db";
+import { authorName } from "@/lib/brand";
 
 type Props = { params: Promise<{ slug: string; chapter: string }> };
 export const dynamic = "force-dynamic";
@@ -32,5 +33,5 @@ export default async function ChapterPage({ params }: Props) {
   return <Reader key={id} series={series.title} seriesUrl={`/series/${series.slug}`} path={chapterLink(series, chapter)}
     chapter={chapter} prev={index > 0 ? chapterLink(series, series.chapters[index - 1]) : undefined}
     next={index + 1 < series.chapters.length ? chapterLink(series, series.chapters[index + 1]) : undefined}
-    watermark={data.settings.watermark ? data.settings.author || "Nightfolio" : ""} comments={comments} />;
+    watermark={data.settings.watermark ? data.settings.author || authorName : ""} comments={comments} />;
 }

@@ -5,7 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { artUrl, numberLabel } from "@/lib/format";
 import { getLocal, rememberProgress, setLocal, useLocal, type ReaderPrefs, type SavedPage } from "@/lib/local";
 import type { Chapter, Direction, PageArt, ReaderMode } from "@/lib/types";
-import { ThemeButton } from "./site-header";
+import { ThemePicker } from "./theme";
 import { ReaderSocial, type Comments } from "./reader-social";
 import { useOfflineChapter } from "./offline";
 
@@ -241,7 +241,7 @@ export function Reader({ series, seriesUrl, path, chapter, next, prev, watermark
               const action = fullscreen ? document.exitFullscreen() : document.documentElement.requestFullscreen();
               void action.catch(() => {});
             }}>{fullscreen ? <Minimize size={18} /> : <Maximize size={18} />}</button>}
-          <div className="reader-theme"><ThemeButton /></div>
+          <div className="reader-theme"><ThemePicker compact /></div>
         </div>
       </div>
       <progress value={progress} max="1" className="reader-progress" aria-label="Chapter progress" />
@@ -315,7 +315,7 @@ export function Reader({ series, seriesUrl, path, chapter, next, prev, watermark
         }}><option value="" disabled>Choose a page</option>{cover && <option value="0">Cover</option>}
           {chapter.pages.map((_, index) => <option key={index} value={index + 1}>Page {index + 1}</option>)}</select></label>
       </div>
-      <div className="reader-dialog-theme"><ThemeButton /></div>
+      <div className="reader-dialog-theme"><ThemePicker /></div>
       {offline.state !== "unavailable" && <div className="offline-status" aria-live="polite">
         <Download size={17} /> {offline.state === "saved" ? "Available offline" : offline.state === "saving" ? "Saving for offline reading…" : "Offline copy could not be saved"}
         {offline.state === "failed" && <button className="button secondary" onClick={offline.retry}>Retry</button>}

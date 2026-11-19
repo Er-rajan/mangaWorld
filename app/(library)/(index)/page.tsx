@@ -1,6 +1,7 @@
 import { BrowseLibrary, ContinueReading, Hero } from "@/components/library";
 import { library } from "@/lib/db";
 import { artUrl } from "@/lib/format";
+import { siteBanner, siteDescription, siteName } from "@/lib/brand";
 import { featuredSlug } from "@/lib/starter";
 import type { Series } from "@/lib/types";
 import type { Metadata } from "next";
@@ -14,8 +15,8 @@ function featuredSeries(series: Series[]) {
 
 export async function generateMetadata(): Promise<Metadata> {
   const featured = featuredSeries((await library()).series);
-  return { alternates: { canonical: "/" }, openGraph: { title: "Nightfolio", description: "An independent manga library.",
-    images: [featured?.hero ?? (featured?.cover_id ? artUrl(featured.cover_id, "full") : "/icon-512.png")], type: "website" } };
+  return { alternates: { canonical: "/" }, openGraph: { title: siteName, description: siteDescription,
+    images: [featured?.hero ?? (featured?.cover_id ? artUrl(featured.cover_id, "full") : siteBanner)], type: "website" } };
 }
 
 export default async function Home() {

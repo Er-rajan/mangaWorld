@@ -1,24 +1,13 @@
 "use client";
 
-import { Bookmark, Moon, Search, Sun, X } from "lucide-react";
+import { Bookmark, Search, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { Brand } from "./brand";
-import { setLocal, useLocal } from "@/lib/local";
+import { ThemePicker } from "./theme";
 
 type Result = { url: string; title: string; subtitle: string; detail: string };
-
-export function ThemeButton() {
-  const theme = useLocal("theme");
-  useEffect(() => { document.documentElement.dataset.theme = theme; }, [theme]);
-  return <button className="icon-button" title={theme === "dark" ? "Light theme" : "Dark theme"}
-    aria-label={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"} onClick={() => {
-      const next = theme === "dark" ? "light" : "dark";
-      document.documentElement.dataset.theme = next;
-      setLocal("theme", next);
-    }}>{theme === "dark" ? <Sun size={19} /> : <Moon size={19} />}</button>;
-}
 
 export function SiteHeader({ search }: { search: Result[] }) {
   const path = usePathname();
@@ -49,7 +38,7 @@ export function SiteHeader({ search }: { search: Result[] }) {
     <div className="site-width header-inner">
       <Brand />
       <nav className="site-nav" aria-label="Main">
-        <Link href="/" aria-current={path === "/" ? "page" : undefined}>Library</Link>
+        <Link href="/" aria-current={path === "/" ? "page" : undefined}>Manga</Link>
         <Link href="/about" aria-current={path === "/about" ? "page" : undefined}>About</Link>
       </nav>
       <div className="header-actions">
@@ -57,7 +46,7 @@ export function SiteHeader({ search }: { search: Result[] }) {
           <Search size={17} /><span>Search manga</span><kbd>Ctrl K</kbd>
         </button>
         <a className="icon-button" href="/shelf" title="My shelf" aria-label="My shelf"><Bookmark size={19} /></a>
-        <ThemeButton />
+        <ThemePicker compact />
       </div>
     </div>
     <dialog className="search-dialog" ref={dialog} aria-label="Search manga" onClose={() => setQuery("")}

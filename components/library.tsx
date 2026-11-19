@@ -7,6 +7,7 @@ import { Art } from "./art";
 import { artUrl, chapterArt, chapterLink, isNew, numberLabel, seriesLink, shortDate } from "@/lib/format";
 import { useLocal } from "@/lib/local";
 import type { ChapterSummary, Series } from "@/lib/types";
+import { authorName, siteBanner, siteName } from "@/lib/brand";
 
 export function SeriesStatus({ series }: { series: Series }) {
   return <span className={`status ${series.status}`}><span />{
@@ -17,8 +18,8 @@ export function SeriesStatus({ series }: { series: Series }) {
 export function SeriesCard({ series }: { series: Series }) {
   const count = series.chapters.length;
   return <Link href={seriesLink(series)} className="series-card">
-    <div className="card-art">
-      <Art id={series.cover_id} />
+    <div className={`card-art${series.cover_id ? "" : " card-without-cover"}`}>
+      {series.cover_id ? <Art id={series.cover_id} /> : <BookOpen className="card-illustration" size={98} strokeWidth={.85} aria-hidden="true" />}
       <SeriesStatus series={series} />
       <div className="card-title"><h3>{series.title}</h3>{series.tags.length > 0 && <p>{series.tags.slice(0, 3).join(" · ")}</p>}</div>
     </div>
@@ -80,19 +81,23 @@ export function BrowseLibrary({ series, today }: { series: Series[]; today: numb
       {latest.length ? <div className="latest-list">
         {latest.map(({ series: entry, chapter }) => <ChapterRow key={`${entry.id}/${chapter.id}`} series={entry}
           chapter={chapter} libraryRow recent={isNew(chapter.release_at, today)} />)}
-      </div> : <p className="empty-box">New chapters will appear here.</p>}
+      </div> : <div className="release-empty">
+        <BookOpen size={25} aria-hidden="true" />
+        <p>New chapters will appear here.</p>
+      </div>}
     </aside>
   </div>;
 }
 
 export function Hero({ series }: { series?: Series }) {
   const first = series?.chapters[0];
-  const artwork = series?.hero ?? (series?.cover_id ? artUrl(series.cover_id, "full") : undefined);
-  return <section className={`hero${artwork ? "" : " hero-without-cover"}`} aria-labelledby="hero-title">
-    {artwork && <img className={series?.hero ? "hero-art" : "hero-art cover-hero"} src={artwork} alt="" fetchPriority="high" />}
+  const customArtwork = series?.hero ?? (series?.cover_id ? artUrl(series.cover_id, "full") : undefined);
+  return <section className={`hero${customArtwork ? "" : " hero-world"}`} aria-labelledby="hero-title">
+    <img className={`hero-art${series?.cover_id && !series.hero ? " cover-hero" : ""}`} src={customArtwork ?? siteBanner} alt="" fetchPriority="high" />
     <div className="hero-content">
-      <div className="hero-eyebrow"><span className="hero-dot" />{series ? "Featured series" : "Independent manga library"}</div>
-      <h1 id="hero-title">{series?.title ?? "Nightfolio"}</h1>
+      <div className="hero-eyebrow"><span className="hero-dot" />{series ? "Featured manga" : "Independent manga library"}</div>
+      <h1 id="hero-title">{series?.title ?? siteName}</h1>
+      <p className="hero-author">By <Link href="/about">{authorName}</Link></p>
       <p>{series?.description || (series && !first ? "Chapters coming soon." : "Original manga, published one chapter at a time.")}</p>
       {series && <div className="hero-actions">
         {first && <a href={chapterLink(series, first)} className="button primary"><BookOpen size={18} /> Start reading</a>}

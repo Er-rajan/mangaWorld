@@ -1,8 +1,10 @@
 import Link from "next/link";
+import { Instagram } from "lucide-react";
 import { library } from "@/lib/db";
 import { Brand } from "@/components/brand";
 import { SiteHeader } from "@/components/site-header";
 import { chapterLink, seriesLink } from "@/lib/format";
+import { authorName, instagramHandle, instagramUrl } from "@/lib/brand";
 
 export default async function LibraryLayout({ children }: { children: React.ReactNode }) {
   const { series } = await library();
@@ -15,9 +17,18 @@ export default async function LibraryLayout({ children }: { children: React.Reac
     <SiteHeader search={search} />
     {children}
     <footer className="site-footer">
-      <div className="site-width flex flex-wrap items-center justify-between gap-5">
-        <Brand />
-        <nav aria-label="Footer" className="flex items-center gap-5"><Link href="/about">About the author</Link><Link href="/admin">Admin</Link></nav>
+      <div className="site-width footer-inner">
+        <div>
+          <Brand />
+          <p>Original manga by <Link href="/about">{authorName}</Link></p>
+        </div>
+        <nav aria-label="Footer">
+          <Link href="/about">About the author</Link>
+          <Link href="/admin">Admin</Link>
+          <a className="button secondary instagram-link" href={instagramUrl} target="_blank" rel="noreferrer">
+            <Instagram size={17} aria-hidden="true" /> <span>{instagramHandle}</span>
+          </a>
+        </nav>
       </div>
     </footer>
   </>;

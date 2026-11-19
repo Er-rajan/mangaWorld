@@ -1,6 +1,6 @@
-# Nightfolio
+# Manga World
 
-Nightfolio is a personal manga library with a public reader and a single-author publishing dashboard. It runs on Next.js App Router, TypeScript and Tailwind CSS. Vercel Hobby hosts the site, and Supabase Free houses its Postgres database and private artwork.
+Manga World is Rajan’s personal manga library with a public reader and a single-author publishing dashboard. It runs on Next.js App Router, TypeScript and Tailwind CSS. Vercel Hobby hosts the site, and Supabase Free houses its Postgres database and private artwork.
 
 ## Run locally
 
@@ -51,7 +51,7 @@ The browser converts artwork to a full-size WebP and a thumbnail before uploadin
 
 ### Free-tier capacity
 
-- Supabase Free includes 500 MB of database space per project, 1 GB of file storage and 5 GB each of cached and uncached egress. The platform permits files up to 50 MB on Free. Nightfolio’s bucket cap is 8 MB per converted image, and each page or cover has two WebP variants. For example, a 20-page chapter averaging 250 KB per full page is about 5 MB to download in full. That’s about 1,000 such downloads in the 5 GB uncached allowance before previews, metadata and other transfers. Actual egress depends on compression and caching. Free projects can pause after a week of low activity. Monitor usage and restore paused projects from the dashboard. [Supabase pricing](https://supabase.com/pricing) · [Bandwidth](https://supabase.com/docs/guides/storage/serving/bandwidth) · [Free project pausing](https://supabase.com/docs/guides/platform/free-project-pausing)
+- Supabase Free includes 500 MB of database space per project, 1 GB of file storage and 5 GB each of cached and uncached egress. The platform permits files up to 50 MB on Free. Manga World’s bucket cap is 8 MB per converted image, and each page or cover has two WebP variants. For example, a 20-page chapter averaging 250 KB per full page is about 5 MB to download in full. That’s about 1,000 such downloads in the 5 GB uncached allowance before previews, metadata and other transfers. Actual egress depends on compression and caching. Free projects can pause after a week of low activity. Monitor usage and restore paused projects from the dashboard. [Supabase pricing](https://supabase.com/pricing) · [Bandwidth](https://supabase.com/docs/guides/storage/serving/bandwidth) · [Free project pausing](https://supabase.com/docs/guides/platform/free-project-pausing)
 - Vercel Hobby is for personal, non-commercial use and has usage caps. The app uses browser-side image processing and time-based database publishing, so it needs neither a paid image transformation service nor a scheduled Vercel job. [Vercel Hobby](https://vercel.com/docs/plans/hobby)
 - Vercel Web Analytics is optional. Switch it on in the dashboard and set `ENABLE_ANALYTICS=true` to activate it. Leave it off or set it to `false` to disable it. Hobby includes up to 50,000 Web Analytics events within its published allowance. [Web Analytics limits](https://vercel.com/docs/analytics/limits-and-pricing)
 
@@ -66,7 +66,7 @@ For optional comments, enable **Discussions** in a public GitHub repository, ins
 - `app/` contains public, reader, admin and API routes, plus metadata and the PWA manifest.
 - `components/` contains the library, reader and admin interfaces.
 - `lib/` contains data access, authentication, browser preferences and client-side upload processing.
-- `public/` contains the offline worker, icons and placeholders.
+- `public/` contains the offline worker, icons, placeholders and original site banner.
 - `supabase/migrations/` contains the database and Storage setup.
 
 Run `npm run typecheck`, `npm run test:db`, and `npm run build`. To run browser tests, install Chromium with `npx playwright install chromium`, then run `npm test`. Set `PLAYWRIGHT_CHANNEL=msedge` to use an installed Microsoft Edge. The browser tests start two local production servers and a disposable Storage/API fixture backed by PGlite. They exercise the actual Next.js handlers and migration without a hosted account or billable dependencies.
