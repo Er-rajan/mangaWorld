@@ -13,16 +13,24 @@ test.beforeAll(async ({ request }) => {
   path = chapterLink(series, series.chapters[0]);
 });
 
-test("starter catalogue features Rajan and keeps The Drowned City coming soon", async ({ page, request }) => {
+test("starter catalogue features Rajan and restores The Drowned City Chapter 1", async ({ page, request }) => {
   const starter = "http://127.0.0.1:3210";
   await page.goto(starter);
   await expect(page.getByRole("heading", { name: "Rajan: The Thor Curse", level: 1 })).toBeVisible();
   await expect(page.locator(".series-card h3")).toHaveText(["Rajan: The Thor Curse", "The Drowned City"]);
-  await page.getByRole("link", { name: /Coming soon The Drowned City/ }).click();
-  await expect(page.getByRole("heading", { name: "The Drowned City", level: 1 })).toBeVisible();
-  await expect(page.getByText("Chapters coming soon.")).toBeVisible();
-  await expect(page.getByRole("link", { name: "Start reading" })).toHaveCount(0);
-  expect((await request.get(starter + "/read/below-the-tide/chapter-1")).status()).toBe(404);
+  await page.getByRole("link", { name: /The Drowned City.*1 chapter/ }).click();
+  for (const origin of [starter, site]) {
+    if (origin === site) await page.goto(origin + "/series/the-drowned-city");
+    await expect(page.getByRole("heading", { name: "The Drowned City", level: 1 })).toBeVisible();
+    await expect(page.locator(".detail-cover")).toHaveAttribute("src", "/manga/the-drowned-city/cover.webp");
+    await expect(page.locator(".upcoming-row")).toHaveText(/Chapter 2Coming soon/);
+    await page.getByRole("link", { name: "Start reading" }).click();
+    await expect(page.locator(".reader-count")).toHaveText("Cover · 4 pages");
+    await expect(page.locator(".manga-page img")).toHaveCount(4);
+    await expect(page.locator(".manga-page img").last()).toHaveAttribute("src", "/manga/the-drowned-city/page-4.webp");
+    await expect(page.locator(".reader-end").getByText("Chapter 2 coming soon")).toBeVisible();
+    expect((await request.get(origin + "/read/the-drowned-city/chapter-2")).status()).toBe(404);
+  }
 });
 
 test("Manga World branding, author, footer Instagram and persistent themes", async ({ page, request }) => {

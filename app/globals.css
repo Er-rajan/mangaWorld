@@ -213,13 +213,16 @@ input[type="range"], input[type="checkbox"], progress { accent-color: var(--acce
 .latest-list { display: grid; border: 1px solid var(--line); background: var(--surface); border-radius: 12px; overflow: hidden; }
 .chapter-row { display: flex; align-items: center; gap: 12px; min-height: 96px; padding: 11px 12px; }
 .chapter-row + .chapter-row { border-top: 1px solid var(--line); }
-.chapter-row:hover { background: var(--raised); }
+.chapter-row:is(a):hover { background: var(--raised); }
 .chapter-row > img { width: 51px; height: 67px; object-fit: cover; border: 1px solid var(--line); border-radius: 6px; flex: none; background: var(--raised); }
 .chapter-row-text { flex: 1; min-width: 0; overflow-wrap: anywhere; }
 .chapter-kicker { color: var(--accent); font-size: .75rem; font-weight: 650; }
 .chapter-row-text h3 { font-size: 1.08rem; line-height: 1.18; margin-block: 2px; }
 .chapter-row-text p { font-size: .76rem; color: var(--muted); }
 .new-badge { border-radius: 5px; color: var(--accent); background: var(--accent-soft); border: 1px solid var(--line); padding: 2px 6px; flex: none; font-size: .72rem; font-weight: 700; }
+.upcoming-thumbnail { display: grid; place-items: center; width: 51px; height: 67px; border: 1px solid var(--line); border-radius: 6px; flex: none; background: var(--raised); color: var(--muted); }
+.upcoming-label { display: inline-flex; gap: 5px; align-items: center; padding: 5px 8px; border: 1px solid var(--line); border-radius: 6px; color: var(--muted); font-size: .79rem; font-weight: 600; }
+.upcoming-label svg { flex: none; }
 .row-chevron { color: var(--muted); flex: none; }
 .empty-box { border: 1px dashed var(--line); border-radius: 12px; padding: 20px; color: var(--muted); }
 .release-empty { display: grid; gap: 10px; align-content: center; min-height: 142px; padding: 19px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--muted); }
@@ -227,6 +230,7 @@ input[type="range"], input[type="checkbox"], progress { accent-color: var(--acce
 
 .detail-page { padding-block: 42px 72px; min-height: 72vh; }
 .detail-hero { display: grid; grid-template-columns: minmax(150px, 245px) minmax(0, 1fr); align-items: center; gap: 36px; padding: 26px; border: 1px solid var(--line); border-radius: 18px; background: radial-gradient(ellipse at 8% 20%, var(--accent-soft), transparent 60%), var(--surface); }
+.drowned-city-hero { background: radial-gradient(ellipse at 8% 20%, color-mix(in srgb, #22858b 30%, var(--surface)), transparent 64%), var(--surface); }
 .detail-cover { width: 100%; height: auto; aspect-ratio: 2/3; object-fit: cover; border-radius: 12px; border: 1px solid var(--line); background: var(--raised); }
 .detail-copy h1, .about-card h1, .shelf-page h1 { font-size: clamp(2.6rem, 6vw, 5rem); margin-block: 10px 13px; overflow-wrap: anywhere; }
 .detail-copy p, .about-card p { max-width: 620px; white-space: pre-wrap; color: var(--muted); overflow-wrap: anywhere; }

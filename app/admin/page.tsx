@@ -4,6 +4,7 @@ import { Art } from "@/components/art";
 import { AdminLogin, SettingsForm } from "@/components/admin/forms";
 import { adminConfigured, isAdmin } from "@/lib/admin-auth";
 import { library } from "@/lib/db";
+import { drownedCitySlug } from "@/lib/drowned-city";
 
 export default async function AdminPage() {
   if (!await isAdmin()) return <main id="main" className="login-page site-width"><AdminLogin enabled={adminConfigured()} /></main>;
@@ -36,7 +37,9 @@ export default async function AdminPage() {
             </span><Pencil size={16} />
           </Link>
         </li>;
-      })}</ul> : <p className="muted">This series has no chapters yet.</p>}
+      })}</ul> : <p className="muted">{series.slug === drownedCitySlug
+        ? "Chapter 1 is included with the site. Your next upload will start at Chapter 2."
+        : "This series has no chapters yet."}</p>}
     </section>)}</div> : <p className="empty-box">Create your first series to start uploading chapters.</p>}
     <SettingsForm settings={settings} commentsConfigured={commentsConfigured} />
   </main>;

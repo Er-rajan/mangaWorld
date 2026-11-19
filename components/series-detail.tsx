@@ -6,6 +6,7 @@ import { Art } from "./art";
 import { ChapterRow, ContinueReading, SeriesStatus } from "./library";
 import { chapterLink, isNew } from "@/lib/format";
 import { getLocal, setLocal, useLocal } from "@/lib/local";
+import { drownedCitySlug, upcomingDrownedCityChapter } from "@/lib/drowned-city";
 import type { Series } from "@/lib/types";
 
 export function SeriesDetail({ series, today }: { series: Series; today: number }) {
@@ -16,8 +17,9 @@ export function SeriesDetail({ series, today }: { series: Series; today: number 
   const byDate = [...series.chapters].sort((a, b) => Date.parse(a.release_at) - Date.parse(b.release_at) || a.number - b.number);
   const latest = byDate.at(-1);
   const chapters = newest ? byDate.reverse() : byDate;
+  const upcoming = upcomingDrownedCityChapter(series);
   return <main id="main" className="site-width detail-page">
-    <section className="detail-hero">
+    <section className={`detail-hero${series.slug === drownedCitySlug ? " drowned-city-hero" : ""}`}>
       <Art id={series.cover_id} eager full className="detail-cover" />
       <div className="detail-copy">
         <SeriesStatus series={series} />
@@ -43,6 +45,11 @@ export function SeriesDetail({ series, today }: { series: Series; today: number 
       </div>
       {chapters.length ? <div className="latest-list">
         {chapters.map((chapter) => <ChapterRow key={chapter.id} series={series} chapter={chapter} recent={isNew(chapter.release_at, today)} />)}
+        {upcoming !== undefined && <div className="chapter-row upcoming-row">
+          <span className="upcoming-thumbnail"><Clock3 size={21} aria-hidden="true" /></span>
+          <div className="chapter-row-text"><h3>Chapter {upcoming}</h3></div>
+          <span className="upcoming-label">Coming soon</span>
+        </div>}
       </div> : <p className="empty-box">Chapters coming soon.</p>}
     </section>
   </main>;

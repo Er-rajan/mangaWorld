@@ -1,6 +1,6 @@
 "use client";
 
-import { Bookmark, BookOpen, ChevronLeft, ChevronRight, Download, Expand, Maximize, Minimize, PanelTop, Settings2, X } from "lucide-react";
+import { Bookmark, BookOpen, ChevronLeft, ChevronRight, Clock3, Download, Expand, Maximize, Minimize, PanelTop, Settings2, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { artUrl, numberLabel } from "@/lib/format";
 import { getLocal, rememberProgress, setLocal, useLocal, type ReaderPrefs, type SavedPage } from "@/lib/local";
@@ -10,19 +10,20 @@ import { ReaderSocial, type Comments } from "./reader-social";
 import { useOfflineChapter } from "./offline";
 
 type Props = { series: string; seriesUrl: string; path: string; chapter: Chapter; next?: string; prev?: string;
-  watermark: string; comments?: Comments };
+  upcoming?: number; reactionsAvailable: boolean; watermark: string; comments?: Comments };
 
 const backgrounds = { ink: "#0c0b10", gray: "#323039", paper: "#dfd9d2" };
 
-function ChapterNav({ prev, next, seriesUrl }: Pick<Props, "prev" | "next" | "seriesUrl">) {
+function ChapterNav({ prev, next, seriesUrl, upcoming }: Pick<Props, "prev" | "next" | "seriesUrl" | "upcoming">) {
   return <nav className="chapter-nav" aria-label="Chapter navigation">
     {prev ? <a href={prev} className="button secondary"><ChevronLeft size={17} /> Previous chapter</a>
       : <a href={seriesUrl} className="button secondary"><BookOpen size={17} /> Chapter list</a>}
-    {next && <a href={next} className="button primary">Next chapter <ChevronRight size={17} /></a>}
+    {next ? <a href={next} className="button primary">Next chapter <ChevronRight size={17} /></a>
+      : upcoming !== undefined && <span className="upcoming-label"><Clock3 size={15} aria-hidden="true" /> Chapter {upcoming} coming soon</span>}
   </nav>;
 }
 
-export function Reader({ series, seriesUrl, path, chapter, next, prev, watermark, comments }: Props) {
+export function Reader({ series, seriesUrl, path, chapter, next, prev, upcoming, reactionsAvailable, watermark, comments }: Props) {
   const total = chapter.pages.length;
   const minimum = chapter.cover_id ? 0 : 1;
   const prefs = useLocal("prefs");
@@ -222,7 +223,8 @@ export function Reader({ series, seriesUrl, path, chapter, next, prev, watermark
   </section>;
   const visible = mode === "vertical" ? chapter.pages.map((item, index) => drawPage(item, index + 1, index < 1 ? "eager" : "lazy"))
     : page > 0 ? chapter.pages.slice(firstVisible - 1, lastVisible).map((item, i) => drawPage(item, firstVisible + i, "eager")) : [];
-  const nav = <ChapterNav prev={prev} next={next} seriesUrl={seriesUrl} />;
+  const nav = <ChapterNav prev={prev} next={next} seriesUrl={seriesUrl}
+    upcoming={mode === "vertical" || lastVisible >= total ? upcoming : undefined} />;
 
   return <main className="reader" id="main" ref={root}>
     <div className="reader-toolbar" ref={toolbar}>
@@ -286,7 +288,7 @@ export function Reader({ series, seriesUrl, path, chapter, next, prev, watermark
     <div className="reader-end">
       {chapter.note && <aside className="author-note"><h2>Author’s note</h2><p>{chapter.note}</p></aside>}
       {nav}
-      <ReaderSocial id={chapter.id} path={path} title={`${series} · ${chapter.title}`} comments={comments}
+      <ReaderSocial id={chapter.id} path={path} title={`${series} · ${chapter.title}`} comments={comments} reactionsAvailable={reactionsAvailable}
         initial={{ views: chapter.views, likes: chapter.likes }} />
     </div>
 

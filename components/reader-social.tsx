@@ -10,8 +10,8 @@ export type Comments = { repo: string; repoId: string; category: string; categor
 
 type Stats = { views: number; likes: number; liked?: boolean };
 
-export function ReaderSocial({ id, path, title, comments, initial }: {
-  id: string; path: string; title: string; comments?: Comments; initial: Stats;
+export function ReaderSocial({ id, path, title, comments, initial, reactionsAvailable }: {
+  id: string; path: string; title: string; comments?: Comments; initial: Stats; reactionsAvailable: boolean;
 }) {
   const [stats, setStats] = useState(initial);
   const [busy, setBusy] = useState(false);
@@ -24,6 +24,7 @@ export function ReaderSocial({ id, path, title, comments, initial }: {
   const changedReaction = useRef(false);
 
   useEffect(() => {
+    if (!reactionsAvailable) return;
     const visitor = visitorId();
     if (!visitor) return;
     fetch("/api/reaction", { method: "POST", headers: { "Content-Type": "application/json" },
@@ -32,7 +33,7 @@ export function ReaderSocial({ id, path, title, comments, initial }: {
       .then((data) => {
         if (data) setStats((current) => changedReaction.current ? { ...current, views: Math.max(current.views, data.views) } : data);
       }).catch(() => {});
-  }, [id]);
+  }, [id, reactionsAvailable]);
 
   const active = stats.liked ?? liked;
 
@@ -55,11 +56,13 @@ export function ReaderSocial({ id, path, title, comments, initial }: {
 
   const shareLink = encodeURIComponent(shareUrl);
   return <>
-    <div className="reader-social" aria-label="Chapter reactions and sharing">
-      <span><Eye size={18} /> {stats.views} {stats.views === 1 ? "view" : "views"}</span>
-      <button className="button secondary" aria-pressed={active} disabled={busy} onClick={toggleLike}>
-        <Heart size={18} fill={active ? "currentColor" : "none"} /> {stats.likes} {stats.likes === 1 ? "like" : "likes"}
-      </button>
+    <div className="reader-social" aria-label={reactionsAvailable ? "Chapter reactions and sharing" : "Chapter sharing"}>
+      {reactionsAvailable && <>
+        <span><Eye size={18} /> {stats.views} {stats.views === 1 ? "view" : "views"}</span>
+        <button className="button secondary" aria-pressed={active} disabled={busy} onClick={toggleLike}>
+          <Heart size={18} fill={active ? "currentColor" : "none"} /> {stats.likes} {stats.likes === 1 ? "like" : "likes"}
+        </button>
+      </>}
       <button className="button secondary" onClick={() => {
         setShareUrl(new URL(path, window.location.origin).href);
         setMessage("");

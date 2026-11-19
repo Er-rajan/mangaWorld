@@ -6,6 +6,7 @@ export const seriesLink = (series: Series) => `/series/${series.slug}`;
 
 export function artUrl(id: string | null | undefined, variant: "thumb" | "full" = "thumb", preview = false) {
   if (!id) return "/placeholder.webp";
+  if (id.startsWith("/manga/")) return id;
   const path = `${id}/${variant}`;
   return preview ? `/api/admin/art/${path}` : `/api/art/${path}`;
 }

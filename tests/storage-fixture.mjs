@@ -5,6 +5,7 @@ import { asRole, openDatabase } from "./database-fixture.mjs";
 
 // Exercise the actual routes and SQL with a local PostgREST/Storage protocol fixture.
 const db = await openDatabase();
+await db.exec(await readFile(new URL("../supabase/seed.sql", import.meta.url), "utf8"));
 const files = new Map();
 const tokens = new Map();
 const rpc = {
