@@ -47,7 +47,14 @@ The browser converts artwork to a full-size WebP and a thumbnail before uploadin
 2. Push the project to a Git repository in your personal account. Include `package-lock.json`, the migration and `supabase/seed.sql`. Exclude `.env.local`, `node_modules` and `.next`.
 3. In a **Hobby** account, select **Add New → Project** and import the repository. Use **Next.js** as the framework preset, the repository root as **Root Directory**, Node.js **22.x**, and the default build and output settings. The build copies the local pdf.js worker and its assets automatically.
 4. Add the Supabase and admin environment variables from `.env.example` for **Production**. If you enable preview deployments that connect to a database, use a separate test database and credentials. 
-5. Deploy. Set `SITE_URL` to the final public HTTPS origin from the project’s **Domains** page and redeploy to apply the canonical URLs. Check the public home, `/sitemap.xml`, and `/admin` and publish a small chapter to confirm uploads in your project.
+5. Deploy. Set `SITE_URL` to the final public HTTPS origin from the project’s **Domains** page and redeploy to apply the canonical URLs. When omitted, the app uses Vercel’s production domain when available. Check the public home, `/sitemap.xml`, and `/admin` and publish a small chapter to confirm uploads in your project.
+
+### Troubleshoot the live catalogue
+
+- In Vercel, open **Logs**, reload the live homepage and check the entry for the Supabase error code or message.
+- If the log says `PGRST205` or a Manga World table is missing, confirm that the schema migration finished successfully in the same Supabase project configured in Vercel. Run `supabase/seed.sql` after the migration to add the starter titles.
+- If the log says the API key is invalid, use the project’s **Connect** dialog to get `SUPABASE_URL` and the publishable key. Get the secret key from **Settings → API Keys** in that same project. Use the exact variable names from `.env.example` in Vercel’s **Production** environment and redeploy after edits.
+- If admin sign-in is disabled, set `ADMIN_USERNAME`, a password of at least 16 characters, and a session secret of at least 32 characters in Vercel’s **Production** environment.
 
 ### Free-tier capacity
 

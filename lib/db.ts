@@ -5,11 +5,12 @@ import { defaultSettings, starterLibrary } from "./starter";
 import { drownedCityChapter, isBundledDrownedCityChapter, restoreDrownedCity } from "./drowned-city";
 import type { Chapter, ChapterSummary, Library, PageArt, Series, Settings } from "./types";
 
-const url = process.env.SUPABASE_URL;
-const publicKey = process.env.SUPABASE_PUBLISHABLE_KEY;
-const secret = process.env.SUPABASE_SECRET_KEY;
+const url = process.env.SUPABASE_URL?.trim();
+const publicKey = process.env.SUPABASE_PUBLISHABLE_KEY?.trim();
+const secret = process.env.SUPABASE_SECRET_KEY?.trim();
 export const hasDatabase = Boolean(url && publicKey && secret);
 export const artBucket = "manga-art";
+const showStarter = process.env.SHOW_DEMO_WHEN_EMPTY !== "false";
 const options = {
   auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
   global: { fetch: (input: RequestInfo | URL, init?: RequestInit) => fetch(input, { ...init, cache: "no-store" }) },
@@ -20,10 +21,9 @@ export function database(admin = false) {
   return createClient(url!, admin ? secret! : publicKey!, options);
 }
 
-export function ensure<T>(result: { data: T | null; error: unknown }): T {
+function ensure<T>(result: { data: T | null; error: unknown }, operation: string): T {
   if (result.error || result.data == null) {
-    console.error("Supabase request failed:", result.error);
-    throw new Error("The library could not be loaded. Try again in a moment.");
+    throw new Error(`Supabase ${operation} failed`, { cause: result.error ?? "Expected a database result" });
   }
   return result.data;
 }
@@ -34,22 +34,21 @@ function toSummary({ chapter_pages, ...row }: ChapterRow): ChapterSummary {
   return { ...row, first_page: chapter_pages[0]?.asset_id ?? null };
 }
 
-async function listRows<T>(read: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: unknown }>) {
+async function listRows<T>(operation: string, read: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: unknown }>) {
   const items: T[] = [];
   const size = 500;
   for (let from = 0; ; from += size) {
-    const rows = ensure(await read(from, from + size - 1));
+    const rows = ensure(await read(from, from + size - 1), operation);
     items.push(...rows);
     if (rows.length < size) return items;
   }
 }
 
-export const library = cache(async (admin = false): Promise<Library> => {
-  if (!hasDatabase) return admin ? { series: [], settings: defaultSettings, demo: true } : starterLibrary;
+async function loadCatalogue(admin: boolean): Promise<Library> {
   const client = database(admin);
   const [series, chapters, settings] = await Promise.all([
-    listRows((from, to) => client.from("series").select("*").order("created_at").order("id").range(from, to)),
-    listRows((from, to) => client.from("chapters").select("*, chapter_pages(asset_id)")
+    listRows("reading series", (from, to) => client.from("series").select("*").order("created_at").order("id").range(from, to)),
+    listRows("reading chapters", (from, to) => client.from("chapters").select("*, chapter_pages(asset_id)")
       .eq("chapter_pages.position", 1).order("number").order("id").range(from, to)),
     client.from("site_settings").select("author,about,watermark,comments,characters").eq("id", 1).single(),
   ]);
@@ -59,12 +58,24 @@ export const library = cache(async (admin = false): Promise<Library> => {
     list.push(toSummary(row));
     grouped.set(row.series_id, list);
   }
-  const currentSettings = ensure(settings) as Settings;
-  if (!admin && !series.length && process.env.SHOW_DEMO_WHEN_EMPTY !== "false") {
+  const currentSettings = ensure(settings, "reading site settings") as Settings;
+  if (!admin && !series.length && showStarter) {
     return { ...starterLibrary, settings: currentSettings };
   }
   const catalogue = series.map((row) => ({ ...row, chapters: grouped.get(row.id) ?? [] })) as Series[];
   return { series: admin ? catalogue : catalogue.map(restoreDrownedCity), settings: currentSettings, demo: false };
+}
+
+export const library = cache(async (admin = false): Promise<Library> => {
+  const empty: Library = { series: [], settings: defaultSettings, demo: true };
+  if (!hasDatabase) return admin || !showStarter ? empty : starterLibrary;
+  if (admin) return loadCatalogue(true);
+  try {
+    return await loadCatalogue(false);
+  } catch (error) {
+    console.error("Could not load the public catalogue from Supabase:", error);
+    return { ...(showStarter ? starterLibrary : empty), unavailable: true };
+  }
 });
 
 export const getChapter = cache(async (slug: string, id: string, admin = false): Promise<Chapter | undefined> => {
@@ -74,10 +85,10 @@ export const getChapter = cache(async (slug: string, id: string, admin = false):
   if (!admin && isBundledDrownedCityChapter(slug, id)) return { ...summary, pages: drownedCityChapter.pages };
   if (data.demo) return undefined;
   const pages = ensure(await database(admin).from("chapter_pages").select("asset_id,width,height,filename,alt")
-    .eq("chapter_id", id).order("position")) as PageArt[];
+    .eq("chapter_id", id).order("position"), "reading chapter pages") as PageArt[];
   return { ...summary, pages };
 });
 
 export async function backup() {
-  return ensure(await database(true).rpc("export_library"));
+  return ensure(await database(true).rpc("export_library"), "exporting the library");
 }

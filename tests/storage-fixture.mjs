@@ -72,6 +72,9 @@ const server = createServer(async (req, res) => {
   const query = (sql, args) => asRole(db, role, (tx) => tx.query(sql, args));
   try {
     if (path === "/health") return respond(res, 200, { status: "ok" });
+    if (path.startsWith("/rest/v1/") && req.headers.apikey === "fixture-invalid") {
+      return respond(res, 401, { message: "Invalid API key" });
+    }
     if (path === "/fixtures/reader" && req.method === "POST") return respond(res, 200, await (readerFixture ??= seedReader()));
     if (req.method === "OPTIONS") return respond(res, 204);
     if (path.startsWith("/storage/v1/")) {

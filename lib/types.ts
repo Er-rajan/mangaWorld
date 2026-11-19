@@ -38,7 +38,7 @@ export type ChapterSummary = {
 export type Chapter = ChapterSummary & { pages: PageArt[] };
 export type Character = { name: string; series: string; bio: string };
 export type Settings = { author: string; about: string; watermark: boolean; comments: boolean; characters: Character[] };
-export type Library = { series: Series[]; settings: Settings; demo: boolean };
+export type Library = { series: Series[]; settings: Settings; demo: boolean; unavailable?: boolean };
 
 export type ReaderMode = "vertical" | "single" | "spread";
 export type Direction = "ltr" | "rtl" | "vertical";

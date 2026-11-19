@@ -24,6 +24,7 @@ export default async function ChapterPage({ params }: Props) {
   const { slug, chapter: id } = await params;
   const [chapter, data] = await Promise.all([getChapter(slug, id), library()]);
   const series = data.series.find((entry) => entry.slug === slug);
+  if ((!chapter || !series) && data.unavailable) throw new Error("The chapter is temporarily unavailable.");
   if (!chapter || !series) notFound();
   const index = series.chapters.findIndex((entry) => entry.id === id);
   const giscus = {

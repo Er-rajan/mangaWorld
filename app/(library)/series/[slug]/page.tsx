@@ -20,7 +20,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function SeriesPage({ params }: Props) {
   const { slug } = await params;
-  const entry = (await library()).series.find((series) => series.slug === slug);
+  const { series, unavailable } = await library();
+  const entry = series.find((series) => series.slug === slug);
+  if (!entry && unavailable) throw new Error("The series is temporarily unavailable.");
   if (!entry) notFound();
   return <SeriesDetail series={entry} today={Date.now()} />;
 }

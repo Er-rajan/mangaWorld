@@ -30,6 +30,7 @@ export function numberLabel(value: number) {
 
 export function siteOrigin() {
   if (process.env.SITE_URL) return new URL(process.env.SITE_URL).origin;
+  if (process.env.VERCEL_PROJECT_PRODUCTION_URL) return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`;
   if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
   return "http://localhost:3000";
 }

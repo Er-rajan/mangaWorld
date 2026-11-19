@@ -7,7 +7,7 @@ import { chapterLink, seriesLink } from "@/lib/format";
 import { authorName, instagramHandle, instagramUrl } from "@/lib/brand";
 
 export default async function LibraryLayout({ children }: { children: React.ReactNode }) {
-  const { series } = await library();
+  const { series, unavailable } = await library();
   const search = series.flatMap((item) => [
     { url: seriesLink(item), title: item.title, subtitle: item.tags.join(" · ") || "Series", detail: item.description },
     ...item.chapters.map((chapter) => ({ url: chapterLink(item, chapter), title: chapter.title,
@@ -15,6 +15,7 @@ export default async function LibraryLayout({ children }: { children: React.Reac
   ]);
   return <>
     <SiteHeader search={search} />
+    {unavailable && <p className="catalogue-notice" role="status">The full manga library is temporarily unavailable.</p>}
     {children}
     <footer className="site-footer">
       <div className="site-width footer-inner">

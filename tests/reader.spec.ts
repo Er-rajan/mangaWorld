@@ -54,6 +54,20 @@ test("Manga World branding, author, footer Instagram and persistent themes", asy
   expect(manifest.name).toBe("Manga World");
 });
 
+test("invalid Supabase credentials leave the bundled catalogue and reader available", async ({ page, request }) => {
+  const invalidKeySite = "http://127.0.0.1:3213";
+  const home = await page.goto(invalidKeySite);
+  expect(home?.status()).toBe(200);
+  await expect(page.getByText("The full manga library is temporarily unavailable.")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Rajan: The Thor Curse", level: 1 })).toBeVisible();
+  const chapter = await page.goto(invalidKeySite + "/read/the-drowned-city/chapter-1");
+  expect(chapter?.status()).toBe(200);
+  await expect(page.locator(".reader-count")).toHaveText("Cover · 4 pages");
+  const sitemap = await request.get(invalidKeySite + "/sitemap.xml");
+  expect(sitemap.ok()).toBe(true);
+  expect(await sitemap.text()).toContain("/read/the-drowned-city/chapter-1");
+});
+
 test("library search, tags, chapter sort and cover fallbacks", async ({ page }) => {
   await page.goto(site);
   await page.getByRole("button", { name: "Sci-fi", exact: true }).click();
