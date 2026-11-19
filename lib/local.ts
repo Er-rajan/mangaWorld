@@ -1,0 +1,70 @@
+"use client";
+
+import { useSyncExternalStore } from "react";
+import type { Direction, ReaderMode } from "./types";
+
+export type SavedPage = {
+  path: string; series: string; chapter: string; page: number; total: number; updated: number;
+};
+export type ReaderPrefs = { mode: ReaderMode; direction: Direction; zoom: number; brightness: number; background: "ink" | "paper" | "gray" };
+export const defaultReader: ReaderPrefs = { mode: "vertical", direction: "rtl", zoom: 100, brightness: 100, background: "ink" };
+
+type LocalValues = {
+  theme: "dark" | "light";
+  follows: string[];
+  progress: Record<string, SavedPage>;
+  bookmarks: SavedPage[];
+  prefs: ReaderPrefs;
+  visitor: string;
+  likes: string[];
+};
+const defaults: LocalValues = { theme: "dark", follows: [], progress: {}, bookmarks: [], prefs: defaultReader, visitor: "", likes: [] };
+const data = new Map<string, { raw: string | null; value: unknown }>();
+const prefix = "nightfolio:";
+const changed = "nightfolio-local";
+
+function subscribe(callback: () => void) {
+  window.addEventListener("storage", callback);
+  window.addEventListener(changed, callback);
+  return () => { window.removeEventListener("storage", callback); window.removeEventListener(changed, callback); };
+}
+
+export function getLocal<K extends keyof LocalValues>(key: K): LocalValues[K] {
+  try {
+    const raw = window.localStorage.getItem(prefix + key);
+    const cached = data.get(key);
+    if (cached !== undefined && cached.raw === raw) return cached.value as LocalValues[K];
+    const value = raw === null ? defaults[key] : key === "theme" ? (raw === "light" ? "light" : "dark") : JSON.parse(raw);
+    data.set(key, { raw, value });
+    return value;
+  } catch {
+    return (data.get(key)?.value as LocalValues[K] | undefined) ?? defaults[key];
+  }
+}
+
+export function setLocal<K extends keyof LocalValues>(key: K, value: LocalValues[K]) {
+  const raw = key === "theme" ? String(value) : JSON.stringify(value);
+  data.set(key, { raw, value });
+  try { window.localStorage.setItem(prefix + key, raw); } catch { /* Keep the setting for this tab. */ }
+  window.dispatchEvent(new Event(changed));
+}
+
+export function useLocal<K extends keyof LocalValues>(key: K): LocalValues[K] {
+  return useSyncExternalStore(subscribe, () => getLocal(key), () => defaults[key]);
+}
+
+export function rememberProgress(entry: SavedPage) {
+  const progress = getLocal("progress");
+  const next = Object.fromEntries(Object.entries({ ...progress, [entry.path]: entry })
+    .sort(([, a], [, b]) => b.updated - a.updated).slice(0, 100));
+  setLocal("progress", next);
+}
+
+export function visitorId() {
+  const id = getLocal("visitor");
+  if (id) return id;
+  if (!globalThis.crypto?.randomUUID) return "";
+  const created = crypto.randomUUID();
+  setLocal("visitor", created);
+  return created;
+}

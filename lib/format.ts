@@ -1,0 +1,34 @@
+import type { ChapterSummary, Series } from "./types";
+
+export const chapterLink = (series: Series, chapter: ChapterSummary) =>
+  `/read/${series.slug}/${chapter.id}`;
+export const seriesLink = (series: Series) => `/series/${series.slug}`;
+
+export function artUrl(id: string | null | undefined, variant: "thumb" | "full" = "thumb", preview = false) {
+  if (!id) return "/placeholder.webp";
+  const path = `${id}/${variant}`;
+  return preview ? `/api/admin/art/${path}` : `/api/art/${path}`;
+}
+
+export function chapterArt(series: Series, chapter: ChapterSummary) {
+  return chapter.cover_id ?? chapter.first_page ?? series.cover_id;
+}
+
+export function isNew(date: string, now = Date.now()) {
+  const age = now - Date.parse(date);
+  return age >= 0 && age < 14 * 86400000;
+}
+
+export function shortDate(date: string) {
+  return new Intl.DateTimeFormat("en", { month: "short", day: "numeric", timeZone: "UTC" }).format(new Date(date));
+}
+
+export function numberLabel(value: number) {
+  return String(value).padStart(2, "0");
+}
+
+export function siteOrigin() {
+  if (process.env.SITE_URL) return new URL(process.env.SITE_URL).origin;
+  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
+  return "http://localhost:3000";
+}

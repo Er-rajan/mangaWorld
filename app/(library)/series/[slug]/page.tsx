@@ -1,0 +1,25 @@
+import type { Metadata } from "next";
+import { notFound } from "next/navigation";
+import { SeriesDetail } from "@/components/series-detail";
+import { library } from "@/lib/db";
+import { artUrl, seriesLink } from "@/lib/format";
+
+type Props = { params: Promise<{ slug: string }> };
+export const dynamic = "force-dynamic";
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { slug } = await params;
+  const series = (await library()).series.find((entry) => entry.slug === slug);
+  if (!series) return {};
+  const { title } = series;
+  const description = series.description || (series.chapters.length ? `Read ${title} on Nightfolio.` : "Chapters coming soon.");
+  return { title, description, alternates: { canonical: seriesLink(series) },
+    openGraph: { title, description, images: [{ url: artUrl(series.cover_id, "full"), alt: `${title} cover` }] } };
+}
+
+export default async function SeriesPage({ params }: Props) {
+  const { slug } = await params;
+  const entry = (await library()).series.find((series) => series.slug === slug);
+  if (!entry) notFound();
+  return <SeriesDetail series={entry} today={Date.now()} />;
+}
