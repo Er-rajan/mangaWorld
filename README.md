@@ -5,7 +5,7 @@ Manga World is Rajan’s personal manga library with a public reader and a singl
 ## Run locally
 
 1. Install Node.js 22 and run `npm ci` from the project directory.
-2. Run `npm run dev`, then open [http://localhost:3000](http://localhost:3000). The starter catalogue includes **Rajan: The Thor Curse**, which opens its ten-page first chapter in single-page mode, and the four-page first chapter of **The Drowned City**. Chapter 2 of The Drowned City is marked coming soon.
+2. Run `npm run dev`, then open [http://localhost:3000](http://localhost:3000). The catalogue includes two chapters of **Rajan: The Thor Curse**, which open in single-page mode, and the four-page first chapter of **The Drowned City**. Chapter 2 of The Drowned City is marked coming soon.
 3. To use the admin, complete the Supabase setup below, copy `.env.example` to `.env.local`, fill it out, and restart the server. Open [http://localhost:3000/admin](http://localhost:3000/admin) to sign in. Run `supabase/seed.sql` in the Supabase SQL Editor to make the starter titles editable. Set `SHOW_DEMO_WHEN_EMPTY=false` if you want an empty public catalogue before adding titles.
 4. To test installable and offline behavior locally, run `npm run build` and then `npm start`. The service worker is enabled in production builds on localhost or HTTPS.
 
@@ -39,7 +39,7 @@ The dashboard’s **Export metadata** button downloads settings, series, chapter
 4. Drop the chapter’s images together or choose one PDF. Wait for the thumbnails. The browser sorts image filenames naturally and converts PDF pages in document order. Drag the thumbnail handles or use the move buttons to set the order. Use the replace and remove controls to fix individual pages and enter alt text where appropriate.
 5. Set **Draft** to keep the chapter private. Choose **Published** and leave the release time blank for immediate release, or enter a future date and time in your device’s time zone to schedule it. Click **Save chapter**. The dashboard lists scheduled times in UTC.
 
-The browser converts artwork to a full-size WebP and a thumbnail before uploading. Each chapter supports up to 250 pages and each source file up to 100 MB. Keep the original images and PDFs. Public previews use the chapter cover, first page, series cover, then a placeholder in that order. The two bundled chapters are served from `public/manga/`. Publishing Chapter 2 of The Drowned City in Supabase replaces its coming-soon entry with a reader link.
+The browser converts artwork to a full-size WebP and a thumbnail before uploading. Each chapter supports up to 250 pages and each source file up to 100 MB. Keep the original images and PDFs. Public previews use the chapter cover, first page, series cover, then a placeholder in that order. The chapters included with the site are served from `public/manga/`. Publishing Chapter 2 of The Drowned City in Supabase replaces its coming-soon entry with a reader link.
 
 ## Deploy on Vercel Hobby
 

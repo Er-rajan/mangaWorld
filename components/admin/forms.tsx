@@ -3,7 +3,7 @@
 import { CalendarClock, LogOut, Plus, Save, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { Chapter, Series, Settings } from "@/lib/types";
-import { bundledChapter } from "@/lib/bundled-chapters";
+import { latestBundledChapterNumber } from "@/lib/bundled-chapters";
 import { adminRequest } from "@/lib/upload";
 import { CoverInput } from "./cover-input";
 import { PagesInput, type EditablePage } from "./pages-input";
@@ -92,8 +92,8 @@ export function AdminChapterForm({ series, chapter }: { series: Series; chapter?
     if (chapter) setDate(localTime(chapter.release_at));
     setZone(Intl.DateTimeFormat().resolvedOptions().timeZone);
   }, [chapter]);
-  const firstNumber = bundledChapter(series.slug)?.number ?? 0;
-  const number = chapter?.number ?? (Math.max(series.chapters.at(-1)?.number ?? 0, firstNumber) + 1);
+  const number = chapter?.number
+    ?? (Math.max(series.chapters.at(-1)?.number ?? 0, latestBundledChapterNumber(series.slug)) + 1);
 
   return <form className="admin-panel admin-form" onSubmit={async (event) => {
     event.preventDefault();

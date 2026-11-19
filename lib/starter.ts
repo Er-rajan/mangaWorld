@@ -1,7 +1,7 @@
 import type { Library, Settings } from "./types";
 import { authorName } from "./brand";
 import { drownedCitySlug } from "./drowned-city";
-import { includeBundledChapter } from "./bundled-chapters";
+import { includeBundledChapters } from "./bundled-chapters";
 import { rajanSlug } from "./rajan";
 
 export const featuredSlug = rajanSlug;
@@ -13,7 +13,7 @@ export const starterLibrary: Library = {
   series: [
     { slug: featuredSlug, title: "Rajan: The Thor Curse" },
     { slug: drownedCitySlug, title: "The Drowned City" },
-  ].map(({ slug, title }) => includeBundledChapter({
+  ].map(({ slug, title }) => includeBundledChapters({
     id: slug, slug, title, description: "", tags: [], status: "ongoing", cover_id: null,
     revision: 1, created_at: "2026-11-19T00:00:00.000Z", chapters: [],
   })),

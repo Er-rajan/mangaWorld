@@ -2,7 +2,7 @@ import "server-only";
 import { createClient } from "@supabase/supabase-js";
 import { cache } from "react";
 import { defaultSettings, starterLibrary } from "./starter";
-import { bundledChapter, includeBundledChapter } from "./bundled-chapters";
+import { bundledChapter, includeBundledChapters } from "./bundled-chapters";
 import type { Chapter, ChapterSummary, Library, PageArt, Series, Settings } from "./types";
 
 const url = process.env.SUPABASE_URL?.trim();
@@ -63,7 +63,7 @@ async function loadCatalogue(admin: boolean): Promise<Library> {
     return { ...starterLibrary, settings: currentSettings };
   }
   const catalogue = series.map((row) => ({ ...row, chapters: grouped.get(row.id) ?? [] })) as Series[];
-  return { series: admin ? catalogue : catalogue.map(includeBundledChapter), settings: currentSettings, demo: false };
+  return { series: admin ? catalogue : catalogue.map(includeBundledChapters), settings: currentSettings, demo: false };
 }
 
 export const library = cache(async (admin = false): Promise<Library> => {
