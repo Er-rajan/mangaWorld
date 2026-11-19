@@ -5,7 +5,7 @@ Manga World is Rajan’s personal manga library with a public reader and a singl
 ## Run locally
 
 1. Install Node.js 22 and run `npm ci` from the project directory.
-2. Run `npm run dev`, then open [http://localhost:3000](http://localhost:3000). The catalogue includes two chapters of **Rajan: The Thor Curse**, which open in single-page mode, and the four-page first chapter of **The Drowned City**. Chapter 2 of The Drowned City is marked coming soon.
+2. Run `npm run dev`, then open [http://localhost:3000](http://localhost:3000). The catalogue includes three chapters of **Rajan: The Thor Curse**, which open in single-page mode, and the four-page first chapter of **The Drowned City**. Chapter 2 of The Drowned City is marked coming soon.
 3. To use the admin, complete the Supabase setup below, copy `.env.example` to `.env.local`, fill it out, and restart the server. Open [http://localhost:3000/admin](http://localhost:3000/admin) to sign in. Run `supabase/seed.sql` in the Supabase SQL Editor to make the starter titles editable. Set `SHOW_DEMO_WHEN_EMPTY=false` if you want an empty public catalogue before adding titles.
 4. To test installable and offline behavior locally, run `npm run build` and then `npm start`. The service worker is enabled in production builds on localhost or HTTPS.
 

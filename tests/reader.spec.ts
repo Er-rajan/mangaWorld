@@ -95,11 +95,8 @@ test("Rajan Chapter 1 opens page by page and includes all ten PDF pages in order
   await expect(counter).toHaveText("9 / 10");
 });
 
-test("Rajan Chapter 2 is the latest chapter and shows all seventeen pages in filename order", async ({ page }) => {
-  const seriesPath = "/series/rajan-the-thor-curse";
+test("Rajan Chapter 2 follows Chapter 1 and shows all seventeen pages in filename order", async ({ page }) => {
   const readerPath = "/read/rajan-the-thor-curse";
-  await page.goto(site + seriesPath);
-  await expect(page.getByRole("link", { name: "Latest chapter", exact: true })).toHaveAttribute("href", readerPath + "/chapter-2");
   await page.goto(site + readerPath + "/chapter-1?page=10");
   await expect(page.locator(".reader-count")).toHaveText("10 / 10");
   await page.locator(".reader-end").getByRole("link", { name: "Next chapter", exact: true }).click();
@@ -121,6 +118,32 @@ test("Rajan Chapter 2 is the latest chapter and shows all seventeen pages in fil
   await expect(next).toBeDisabled();
   await expect(page.locator(".reader-end").getByRole("link", { name: "Previous chapter", exact: true }))
     .toHaveAttribute("href", readerPath + "/chapter-1");
+});
+
+test("Rajan Chapter 3 is the latest chapter and shows all twenty pages in filename order", async ({ page }) => {
+  const readerPath = "/read/rajan-the-thor-curse";
+  await page.goto(site + "/series/rajan-the-thor-curse");
+  await expect(page.getByRole("link", { name: "Latest chapter", exact: true })).toHaveAttribute("href", readerPath + "/chapter-3");
+  await page.goto(site + readerPath + "/chapter-2?page=17");
+  await page.locator(".reader-end").getByRole("link", { name: "Next chapter", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Heaven’s Judgment", level: 1 })).toBeVisible();
+  await expect(page.locator(".reader-layout")).toHaveClass(/single/);
+
+  const next = page.getByRole("button", { name: "Next page", exact: true });
+  const image = page.locator(".manga-page img");
+  for (let number = 1; number <= 20; number++) {
+    await expect(page.locator(".reader-count")).toHaveText(`${number} / 20`);
+    await expect(image).toHaveCount(1);
+    await expect(image).toHaveAttribute("src", `/manga/rajan-the-thor-curse/chapter-3/page-${String(number).padStart(2, "0")}.webp`);
+    expect(await image.evaluate(async (artwork: HTMLImageElement) => {
+      await artwork.decode();
+      return [artwork.naturalWidth, artwork.naturalHeight];
+    })).toEqual([1024, 1536]);
+    if (number < 20) await next.click();
+  }
+  await expect(next).toBeDisabled();
+  await expect(page.locator(".reader-end").getByRole("link", { name: "Previous chapter", exact: true }))
+    .toHaveAttribute("href", readerPath + "/chapter-2");
 });
 
 test("invalid Supabase credentials leave the bundled catalogue and reader available", async ({ page, request }) => {
