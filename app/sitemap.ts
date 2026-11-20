@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const { series, settings } = await library();
   const origin = siteOrigin();
-  return ["/", "/about", ...(settings.characters.length ? ["/characters"] : []),
+  return ["/", "/about", "/chapters", "/reels", ...(settings.characters.length ? ["/characters"] : []),
     ...series.flatMap((item) => [seriesLink(item), ...item.chapters.map((entry) => chapterLink(item, entry))])]
     .map((path) => ({ url: origin + path }));
 }

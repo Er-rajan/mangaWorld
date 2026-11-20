@@ -70,3 +70,23 @@ test("migration applies and schedules release, with draft metadata and art prote
     assert.equal((await admin("select id from public.chapters")).rows.length, 0);
   } finally { await db.close(); }
 });
+
+test("each visitor can like a published reel once and hidden reels stay private", async () => {
+  const db = await openDatabase();
+  const admin = (sql, args) => asRole(db, "service_role", (tx) => tx.query(sql, args));
+  const reader = (sql, args) => asRole(db, "anon", (tx) => tx.query(sql, args));
+  try {
+    const category_id = (await reader("select id from public.reel_categories order by position limit 1")).rows[0].id;
+    const reel = { title: "Test reel", caption: "", youtube_id: "M7lc1UVf-VE", category_id, published: false };
+    const id = (await admin("select public.mutate_reels('save', $1) as id", [reel])).rows[0].id;
+    const visitor = randomUUID();
+    const like = (desired) => admin("select * from public.react_to_reel($1, $2, $3)", [id, visitor, desired]);
+    assert.deepEqual((await reader("select id from public.reels")).rows, []);
+    assert.deepEqual((await like(true)).rows, []);
+    await admin("select public.mutate_reels('save', $1)", [{ ...reel, id, published: true }]);
+    assert.deepEqual((await like(true)).rows, [{ liked: true, count: 1 }]);
+    assert.deepEqual((await like(true)).rows, [{ liked: true, count: 1 }]);
+    assert.deepEqual((await like(false)).rows, [{ liked: false, count: 0 }]);
+    await assert.rejects(reader("select visitor from public.reel_likes"), /permission denied/);
+  } finally { await db.close(); }
+});

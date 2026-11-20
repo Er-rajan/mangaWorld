@@ -12,7 +12,7 @@ Manga World is Rajan’s personal manga library with a public reader and a singl
 ## Set up Supabase Free
 
 1. In the [Supabase dashboard](https://supabase.com/dashboard), create a project in a **Free** organization. Pick a region near your readers if they are concentrated in one area.
-2. Open **SQL Editor**, create a new query, paste `supabase/migrations/001_nightfolio.sql`, and run it once on the new project. The transaction creates the schema, RLS policies, server-only database functions, and the private `manga-art` Storage bucket. Run `supabase/seed.sql` in a second query to add the two starter titles. Under **Storage**, verify the bucket is private and accepts WebP. Its file limit is 8,000,000 bytes per converted object.
+2. In SQL Editor, run `supabase/migrations/001_nightfolio.sql`, `002_series_extras.sql`, and `003_reels.sql` in order on a new project. Migration `001` creates the catalogue and private `manga-art` bucket. Run `supabase/seed.sql` to add editable entries for the two bundled series. Under Storage, verify the bucket is private and accepts WebP. Its file limit is 8,000,000 bytes per converted object.
 3. In **Connect** or **Project Settings → API Keys**, copy the project URL, the publishable key and the secret key. Set `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` and `SUPABASE_SECRET_KEY`. The legacy anon and service-role keys also work in the corresponding slots. Keep the secret key server-side.
 4. Set `ADMIN_USERNAME` and a unique `ADMIN_PASSWORD` at least 16 characters long. Generate a session secret with `node -e "console.log(require('node:crypto').randomBytes(48).toString('hex'))"` and set `ADMIN_SESSION_SECRET`. Keep `.env.local` out of Git. Rotating the admin username, password, or session secret invalidates existing sessions.
 
@@ -29,7 +29,7 @@ Manga World is Rajan’s personal manga library with a public reader and a singl
 
 Chapter metadata, images and reactions are available publicly only when the chapter is marked **Published** and its release timestamp is due. Postgres evaluates the timestamp on each new request. The application issues exact-path signed upload URLs after admin authentication and redirects authorized image reads to short-lived signed downloads. Storage receives the image bytes directly in both directions. Postgres saves the page order and chapter metadata in one transaction after checking uploaded files. The browser associates views and likes with a random local identifier. Views are counted once per chapter, browser and UTC day.
 
-The dashboard’s **Export metadata** button downloads settings, series, chapters, page order, storage identifiers and aggregate counts as JSON. For a complete backup, retain your original artwork and download the `manga-art` objects separately. The JSON export contains metadata only. **Clean up unused artwork** permanently removes batches of up to 50 unreferenced artwork sets uploaded more than three hours ago. Run it after replacing or deleting a large batch once your edits have been saved. An offline copy previously downloaded by a reader can remain on that reader’s device.
+The dashboard’s **Export metadata** button downloads settings, series, chapters, page order, storage identifiers, Reels, categories and aggregate counts as JSON. For a complete backup, retain your original artwork and download the `manga-art` objects separately. **Clean up unused artwork** permanently removes batches of up to 50 unreferenced artwork sets uploaded more than three hours ago. Run it after replacing or deleting a large batch once your edits have been saved. An offline copy previously downloaded by a reader can remain on that reader’s device.
 
 ## Publish a series and chapter
 
@@ -41,6 +41,12 @@ The dashboard’s **Export metadata** button downloads settings, series, chapter
 
 The browser converts artwork to a full-size WebP and a thumbnail before uploading. Each chapter supports up to 250 pages and each source file up to 100 MB. Keep the original images and PDFs. Public previews use the chapter cover, first page, series cover, then a placeholder in that order. The chapters included with the site are served from `public/manga/`. Publishing Chapter 2 of The Drowned City in Supabase replaces its coming-soon entry with a reader link.
 
+## Publish Reels
+
+Open **Admin → Manage Reels** and paste a YouTube video or Shorts link for a clip you created or have permission to use. Set the title, category, caption, tags, and optional manga link. Check **Published** to show the clip. Use **Move up** and **Move down** to change the play order. Rename or add categories from the same page. Before deleting a category, reassign its clips.
+
+Reels uses YouTube’s privacy-enhanced embeds. Supabase stores the clip metadata and likes, and Supabase video storage usage stays at 0 MB. Video playback requests start when a clip enters view in the Reels feed. Checking reduced motion leaves playback under the reader’s control. [YouTube embed options](https://support.google.com/youtube/answer/171780)
+
 ## Deploy on Vercel Hobby
 
 1. Complete the Supabase setup above.
@@ -48,6 +54,8 @@ The browser converts artwork to a full-size WebP and a thumbnail before uploadin
 3. In a **Hobby** account, select **Add New → Project** and import the repository. Use **Next.js** as the framework preset, the repository root as **Root Directory**, Node.js **22.x**, and the default build and output settings. The build copies the local pdf.js worker and its assets automatically.
 4. Add the Supabase and admin environment variables from `.env.example` for **Production**. If you enable preview deployments that connect to a database, use a separate test database and credentials. 
 5. Deploy. Set `SITE_URL` to the final public HTTPS origin from the project’s **Domains** page and redeploy to apply the canonical URLs. When omitted, the app uses Vercel’s production domain when available. Check the public home, `/sitemap.xml`, and `/admin` and publish a small chapter to confirm uploads in your project.
+
+On an existing project that already applied `001`, apply `002_series_extras.sql` and `003_reels.sql` in that order before deploying. The migrations add public release-date previews, attach existing artwork uploads to character profiles, and create the Reels metadata tables and policies. The existing `manga-art` bucket and production variables are reused. Set `FEATURED_SERIES` to a comma-separated list of existing series slugs if you want several titles in the homepage carousel.
 
 ### Troubleshoot the live catalogue
 
@@ -64,7 +72,7 @@ The browser converts artwork to a full-size WebP and a thumbnail before uploadin
 
 ### Install, offline and comments
 
-Use the browser’s **Install app** or **Add to Home Screen** control where available. Open a chapter online and wait for **Available offline** in **Reader settings**. Reopen the chapter directly or from a bookmark or reading history under **My shelf**. The service worker keeps up to three chapters on the device, subject to browser storage availability. Offline preparation downloads the chapter’s images once. Reader preferences, progress, bookmarks and followed series live in localStorage.
+Use the browser’s **Install app** or **Add to Home Screen** control where available. Open a chapter online and wait for **Available offline** in **Reader settings**. Reopen the chapter directly or from a bookmark or reading history under **My shelf**. The service worker keeps up to three chapters on the device, subject to browser storage availability. Offline preparation downloads the chapter’s images once. Reader preferences, the current page and vertical scroll position, bookmarks and followed series live in localStorage.
 
 For optional comments, enable **Discussions** in a public GitHub repository, install the Giscus app for it, and use [giscus.app](https://giscus.app/) to populate the four `GISCUS_*` variables. Then turn on **Enable Giscus comments** under **Site settings**. Commenters sign in to GitHub. The author name, bio and optional reader watermark are also editable there. Add entries under **Character profiles** to make the profiles page available from About.
 

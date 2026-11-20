@@ -1,0 +1,19 @@
+.reels-page { width: min(620px, calc(100% - 30px)); margin-inline: auto; padding-block: 19px 30px; }
+.reel-header h1 { font-size: clamp(1.7rem, 6vw, 2.8rem); margin-bottom: 10px; }
+.reel-filters.filters { flex-wrap: nowrap; overflow-x: auto; padding: 3px; margin: 0 -3px 10px; }
+.reel-filters button { flex: none; white-space: nowrap; min-height: 40px; }
+.reel-feed { position: relative; height: max(420px, calc(100dvh - 229px)); overflow-y: auto; overscroll-behavior: contain; scroll-snap-type: y mandatory; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
+.reel-slide { display: grid; grid-template-rows: minmax(200px, 1fr) auto auto; gap: 7px; min-height: 100%; padding: 9px clamp(15px, 5vw, 38px) 14px; scroll-snap-align: start; scroll-snap-stop: always; }
+.reel-video { display: grid; place-items: center; overflow: hidden; min-height: 200px; border-radius: 8px; background: #08080d; color: #b4a8bc; }
+.reel-video iframe { width: 100%; height: 100%; min-height: 200px; border: 0; }
+.reel-caption { display: grid; grid-row: 3; gap: 5px; overflow-wrap: anywhere; }
+.reel-caption h2 { font-size: clamp(1.2rem, 4vw, 1.65rem); }
+.reel-caption p, .reel-playback { color: var(--muted); font-size: .85rem; }
+.reel-caption .reel-category { color: var(--accent); font-weight: 650; }
+.reel-playback, .reel-actions, .reel-navigation { display: flex; align-items: center; flex-wrap: wrap; gap: 7px; }
+.reel-playback .button, .reel-actions .button { min-height: 40px; padding: 6px 9px; }
+.reel-playback progress { flex: 1; min-width: 70px; height: 7px; }
+.reel-playback a { text-decoration: underline; }
+.reel-navigation { justify-content: space-between; margin-top: 10px; }
+.reel-empty { display: grid; justify-items: center; gap: 8px; padding-block: 45px; text-align: center; }
+.reel-loading { height: clamp(280px, 65dvh, 680px); margin-top: 18px; }

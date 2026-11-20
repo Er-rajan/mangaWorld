@@ -92,9 +92,10 @@ export const getChapter = cache(async (slug: string, id: string, admin = false):
 
 export async function nextChapterRelease(series: Series): Promise<ScheduledRelease | undefined> {
   if (!hasDatabase || series.id === series.slug) return undefined;
-  const { data, error } = await database().rpc("next_chapter_release", { series: series.id }).maybeSingle<ScheduledRelease>();
+  const { data, error } = await database().rpc("next_chapter_release", { series: series.id });
   if (error && error.code !== "PGRST202") console.error("Could not load scheduled chapter release:", error);
-  return data ?? undefined;
+  const next: ScheduledRelease | undefined = data?.[0];
+  return next ? { ...next, number: Number(next.number) } : undefined;
 }
 
 export async function backup() {

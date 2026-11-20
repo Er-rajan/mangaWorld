@@ -315,7 +315,7 @@ export function Reader({ series, seriesUrl, path, chapter, next, prev, nextArtwo
 
   function toggleZoom() {
     const offset = mode === "vertical" ? pageOffset(page) : undefined;
-    if (offset !== undefined) zoomAnchor.current = { index: page, offset };
+    if (offset !== undefined && prefs.zoom < 150) zoomAnchor.current = { index: page, offset };
     setZoomed(!zoomed);
   }
 

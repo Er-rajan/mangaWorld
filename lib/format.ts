@@ -19,13 +19,14 @@ export function readerThumbnail(id: string) {
   return id.startsWith("/manga/") ? id.replace(/\.webp$/, "-preview.webp") : artUrl(id, "thumb");
 }
 
+export function chapterThumbnail(series: Series, chapter: ChapterSummary) {
+  const asset = chapter.cover_id ?? chapter.thumbnail_id ?? chapter.first_page ?? series.cover_id;
+  return asset && /^\/manga\/.+\/(?:cover|page-\d+)\.webp$/.test(asset) ? readerThumbnail(asset) : artUrl(asset);
+}
+
 export function isNew(date: string, now = Date.now()) {
   const age = now - Date.parse(date);
   return age >= 0 && age < 7 * 86400000;
-}
-
-export function shortDate(date: string) {
-  return new Intl.DateTimeFormat("en", { month: "short", day: "numeric", timeZone: "Asia/Kolkata" }).format(new Date(date));
 }
 
 const relativeDate = new Intl.RelativeTimeFormat("en", { numeric: "auto" });

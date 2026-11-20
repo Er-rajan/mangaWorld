@@ -299,3 +299,12 @@ test("continue reading restores a vertical position within the saved page", asyn
   await page.getByRole("link", { name: /Continue reading/ }).click();
   await expect.poll(() => page.evaluate((saved) => Math.abs(scrollY - saved), position)).toBeLessThan(3);
 });
+
+test("the header fits small phones and tablets with Reels navigation", async ({ page }) => {
+  await page.goto("http://127.0.0.1:3210");
+  for (const width of [320, 360, 581, 650, 960, 1024]) {
+    await page.setViewportSize({ width, height: 830 });
+    await expect(page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "Reels" })).toBeVisible();
+    await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth)).toBe(width);
+  }
+});

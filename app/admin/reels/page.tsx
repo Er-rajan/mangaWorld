@@ -4,6 +4,7 @@ import { ReelsAdmin } from "@/components/admin/reels";
 import { isAdmin } from "@/lib/admin-auth";
 import { library } from "@/lib/db";
 import { reelCatalogue, reelLinks } from "@/lib/reels-server";
+import "./admin-reels.css";
 
 export default async function AdminReelsPage() {
   if (!await isAdmin()) redirect("/admin");

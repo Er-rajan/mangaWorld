@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { ReelFeed } from "@/components/reel-feed";
 import { library } from "@/lib/db";
 import { reelCatalogue, reelLinks } from "@/lib/reels-server";
+import "./reels.css";
 
 export const metadata: Metadata = { title: "Reels", description: "Short manga animations, trailers, and behind-the-scenes clips by Rajan.",
   alternates: { canonical: "/reels" } };

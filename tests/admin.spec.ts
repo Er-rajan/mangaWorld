@@ -84,6 +84,9 @@ test("admin crops and uploads covers, bulk uploads and reorders images, converts
   const seriesPath = `/series/${slug}`;
   const chapterPath = `/read/${slug}/${chapter.id}`;
   const coverPath = `/api/art/${chapter.cover_id}/thumb`;
+  const teaser = await (await request.get(site + seriesPath)).text();
+  expect(teaser).toContain("Scheduled for");
+  expect(teaser).not.toContain("Opening Rails");
   expect((await request.get(site + coverPath)).status()).toBe(404);
   const hidden = await request.get(site + chapterPath);
   expect(hidden.status()).toBe(404);

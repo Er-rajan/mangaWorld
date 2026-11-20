@@ -1,0 +1,7 @@
+.admin-reels > .empty-box, .admin-reels .admin-settings { margin-top: 15px; }
+.admin-reels .admin-settings { align-items: start; }
+.reel-admin-form { margin-top: 12px; }
+.reel-admin-feedback { position: sticky; top: 0; z-index: 2; background: var(--bg); padding-block: 8px; }
+.reel-admin-feedback:empty { display: none; }
+.reel-category-form { display: flex; gap: 6px; flex-wrap: wrap; align-items: end; }
+.reel-category-form label { flex: 1 1 130px; }

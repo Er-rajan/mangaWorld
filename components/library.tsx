@@ -3,8 +3,7 @@
 import { BookOpen, ChevronRight, Instagram, Layers3, LibraryBig } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { Art } from "./art";
-import { artUrl, chapterArt, chapterLink, fullDate, isNew, latestReleasedChapter, numberLabel, releaseAge, seriesLink } from "@/lib/format";
+import { artUrl, chapterLink, chapterThumbnail, fullDate, isNew, latestReleasedChapter, numberLabel, releaseAge, seriesLink } from "@/lib/format";
 import { useLocal } from "@/lib/local";
 import type { ChapterSummary, Series } from "@/lib/types";
 import { authorName, instagramHandle, instagramUrl, siteBanner, siteName } from "@/lib/brand";
@@ -140,7 +139,7 @@ export function ChapterRow({ series, chapter, today, libraryRow = false, recent 
   series: Series; chapter: ChapterSummary; today: number; libraryRow?: boolean; recent?: boolean;
 }) {
   return <Link prefetch={false} className="chapter-row" href={chapterLink(series, chapter)}>
-    <Art id={chapter.cover_id ?? chapter.thumbnail_id ?? chapterArt(series, chapter)} />
+    <img src={chapterThumbnail(series, chapter)} alt="" loading="lazy" decoding="async" />
     <div className="chapter-row-text">
       <div className="chapter-kicker">{libraryRow ? series.title : `Chapter ${numberLabel(chapter.number)}`}</div>
       <h3>{chapter.title}</h3>
@@ -160,7 +159,7 @@ export function ContinueReading({ series }: { series: Series[] }) {
   if (!entry) return null;
   const { item, chapter } = readable.get(entry.path)!;
   return <a className="resume-strip" href={`${entry.path}?page=${entry.page}&resume=1`}>
-    <Art id={chapter.cover_id ?? chapter.thumbnail_id ?? chapterArt(item, chapter)} className="resume-art" />
+    <img src={chapterThumbnail(item, chapter)} alt="" className="resume-art" loading="lazy" decoding="async" />
     <span><strong>Continue reading</strong><small>{item.title} · {chapter.title}</small>
       <span className="resume-progress"><progress value={entry.page} max={entry.total} aria-label="Reading progress" />
         <small>Page {entry.page} of {entry.total}</small></span></span>
