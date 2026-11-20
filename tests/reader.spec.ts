@@ -224,13 +224,17 @@ test("small-screen layout, tap zones and swipe", async ({ browser }) => {
     await expect(page.getByRole("heading", { name: "Browse series" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Search manga", exact: true })).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(devices["Pixel 7"].viewport.width);
+    await page.getByRole("button", { name: "Next chapters" }).tap();
+    await expect.poll(() => page.locator("#chapter-carousel").evaluate((track) => track.scrollLeft)).toBeGreaterThan(0);
     await page.goto(site + path);
     await page.getByRole("button", { name: "Reader settings", exact: true }).click();
     await expect(page.getByRole("option", { name: "Double-page spread" })).toBeDisabled();
     await page.getByLabel("Reading mode").selectOption("single");
     await page.getByRole("button", { name: "Close settings" }).click();
     await page.getByRole("button", { name: "Begin chapter" }).click();
+    await expect(page.getByRole("complementary", { name: "Tap zones tutorial" })).toBeVisible();
     await page.getByRole("button", { name: "Next page on left" }).tap();
+    await expect(page.getByRole("complementary", { name: "Tap zones tutorial" })).toHaveCount(0);
     await expect(page.locator(".reader-count")).toHaveText("2 / 4");
     const session = await context.newCDPSession(page);
     await session.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x: 115, y: 280 }] });
@@ -239,4 +243,43 @@ test("small-screen layout, tap zones and swipe", async ({ browser }) => {
     await expect(page.locator(".reader-count")).toHaveText("3 / 4");
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(devices["Pixel 7"].viewport.width);
   } finally { await context.close(); }
+});
+
+test("page slider previews a thumbnail and saves a jump with reduced motion", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  const chapter = "/read/rajan-the-thor-curse/chapter-1";
+  await page.goto(site + chapter + "?page=2");
+  const slider = page.getByRole("slider", { name: "Page", exact: true });
+  await expect(slider).toHaveValue("2");
+  const nextButton = (await page.getByRole("button", { name: "Next page", exact: true }).boundingBox())!;
+  const dock = (await page.locator(".reader-bottom").boundingBox())!;
+  expect(nextButton.y + nextButton.height).toBeLessThanOrEqual(dock.y);
+
+  const track = (await slider.boundingBox())!;
+  await page.mouse.move(track.x + track.width - 4, track.y + track.height / 2);
+  await expect(page.locator(".scrubber-thumbnail img")).toHaveAttribute("src", /page-10-preview\.webp$/);
+  await page.mouse.down();
+  await page.mouse.move(track.x + track.width / 2, track.y + track.height / 2, { steps: 5 });
+  await expect(page.locator(".reader-count")).toHaveText("2 / 10");
+  await page.mouse.up();
+  await expect(page.locator(".reader-count")).toHaveText("6 / 10");
+
+  await page.getByRole("button", { name: "Reader settings" }).click();
+  await page.getByLabel("Page transition").selectOption("page-flip");
+  await page.getByRole("button", { name: "Close settings" }).click();
+  await slider.press("End");
+  await expect(page.getByRole("heading", { name: "End of chapter" })).toBeVisible();
+  await expect(page.locator(".manga-page")).toHaveCSS("animation-name", "none");
+  await page.goto(site + chapter);
+  await expect(slider).toHaveValue("10");
+  await expect(page.locator(".reader-layout")).toHaveAttribute("data-transition", "page-flip");
+});
+
+test("covered chapters advance into the reader and controls return on pointer movement", async ({ page }) => {
+  await page.goto(site + "/read/the-drowned-city/chapter-1");
+  await expect(page.getByRole("button", { name: "Begin chapter" })).toBeVisible();
+  await expect(page.getByRole("slider", { name: "Page", exact: true })).toHaveValue("1");
+  await expect(page.locator(".reader-toolbar")).toHaveCSS("opacity", "0");
+  await page.mouse.move(200, 250);
+  await expect(page.locator(".reader-toolbar")).toHaveCSS("opacity", "1");
 });

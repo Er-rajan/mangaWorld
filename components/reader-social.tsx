@@ -59,7 +59,7 @@ export function ReaderSocial({ id, path, title, comments, initial, reactionsAvai
     <div className="reader-social" aria-label={reactionsAvailable ? "Chapter reactions and sharing" : "Chapter sharing"}>
       {reactionsAvailable && <>
         <span><Eye size={18} /> {stats.views} {stats.views === 1 ? "view" : "views"}</span>
-        <button className="button secondary" aria-pressed={active} disabled={busy} onClick={toggleLike}>
+        <button className="button secondary reaction-button" aria-pressed={active} disabled={busy} onClick={toggleLike}>
           <Heart size={18} fill={active ? "currentColor" : "none"} /> {stats.likes} {stats.likes === 1 ? "like" : "likes"}
         </button>
       </>}

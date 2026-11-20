@@ -21,7 +21,7 @@ function isChapter(url) {
 }
 
 function isArtwork(url) {
-  return /^(?:\/api\/art\/[a-f0-9-]+\/(?:full|thumb)|\/manga\/[a-z0-9-]+\/(?:chapter-[a-z0-9-]+\/)?(?:cover|page-\d+)\.webp)$/.test(url.pathname);
+  return /^(?:\/api\/art\/[a-f0-9-]+\/(?:full|thumb)|\/manga\/[a-z0-9-]+\/(?:chapter-[a-z0-9-]+\/)?(?:cover|page-\d+)(?:-preview)?\.webp)$/.test(url.pathname);
 }
 
 function isBundle(url) {
@@ -77,7 +77,11 @@ self.addEventListener("fetch", (event) => {
       }
     })());
   } else if (isArtwork(url)) {
-    event.respondWith(fetch(request).catch(async () => await caches.match(navigationKey(url)) ?? Response.error()));
+    event.respondWith(fetch(request).catch(async () => {
+      const key = navigationKey(url);
+      const full = key.replace(/\/thumb$/, "/full").replace(/-preview\.webp$/, ".webp");
+      return await caches.match(key) ?? (full === key ? undefined : await caches.match(full)) ?? Response.error();
+    }));
   }
 });
 

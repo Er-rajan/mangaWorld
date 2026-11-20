@@ -1,16 +1,18 @@
 "use client";
 
-import { Bookmark, BookOpen, ChevronLeft, ChevronRight, Clock3, Download, Expand, Maximize, Minimize, PanelTop, Settings2, X } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Bookmark, BookOpen, Check, ChevronLeft, ChevronRight, Clock3, Download, Expand, Maximize, Minimize, PanelTop, Settings2, X } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { artUrl, numberLabel } from "@/lib/format";
-import { getLocal, rememberProgress, setLocal, useLocal, type ReaderPrefs, type SavedPage } from "@/lib/local";
+import { getLocal, rememberProgress, setLocal, useLocal, type PageTransition, type ReaderPrefs, type SavedPage } from "@/lib/local";
 import type { Chapter, Direction, PageArt, ReaderLayout, ReaderMode } from "@/lib/types";
 import { ThemePicker } from "./theme";
 import { ReaderSocial, type Comments } from "./reader-social";
 import { useOfflineChapter } from "./offline";
+import { ReaderArtwork } from "./reader-artwork";
+import { PageScrubber, useReaderChrome } from "./reader-chrome";
 
 type Props = { series: string; seriesUrl: string; path: string; chapter: Chapter; next?: string; prev?: string;
-  upcoming?: number; reactionsAvailable: boolean; watermark: string; comments?: Comments; defaultLayout?: ReaderLayout };
+  nextArtwork: string[]; upcoming?: number; reactionsAvailable: boolean; watermark: string; comments?: Comments; defaultLayout?: ReaderLayout };
 
 const backgrounds = { ink: "#0c0b10", gray: "#323039", paper: "#dfd9d2" };
 
@@ -23,22 +25,32 @@ function ChapterNav({ prev, next, seriesUrl, upcoming }: Pick<Props, "prev" | "n
   </nav>;
 }
 
-export function Reader({ series, seriesUrl, path, chapter, next, prev, upcoming, reactionsAvailable, watermark, comments, defaultLayout }: Props) {
+function canPreload() {
+  const { connection } = navigator as Navigator & { connection?: { saveData?: boolean; effectiveType?: string } };
+  return navigator.onLine && !connection?.saveData && !connection?.effectiveType?.endsWith("2g");
+}
+
+export function Reader({ series, seriesUrl, path, chapter, next, prev, nextArtwork, upcoming, reactionsAvailable, watermark, comments, defaultLayout }: Props) {
   const total = chapter.pages.length;
   const minimum = chapter.cover_id ? 0 : 1;
   const prefs = useLocal("prefs");
   const seriesLayouts = useLocal("seriesLayouts");
   const layout = defaultLayout ? seriesLayouts[seriesUrl] ?? defaultLayout : prefs;
   const bookmarks = useLocal("bookmarks");
+  const guideSeen = useLocal("tapGuideSeen");
   const [desktop, setDesktop] = useState(false);
   const mode = !desktop && layout.mode === "spread" ? "single" : layout.mode;
   const rtl = layout.direction !== "ltr";
   const [page, setPage] = useState(minimum);
   const [ready, setReady] = useState(false);
+  const [opening, setOpening] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
   const [fullscreenAvailable, setFullscreenAvailable] = useState(false);
   const [zoomed, setZoomed] = useState(false);
   const root = useRef<HTMLElement>(null);
+  const pageLayout = useRef<HTMLDivElement>(null);
+  const ending = useRef<HTMLElement>(null);
   const dialog = useRef<HTMLDialogElement>(null);
   const figures = useRef(new Map<number, HTMLElement>());
   const scrollTarget = useRef<number | null>(null);
@@ -47,6 +59,9 @@ export function Reader({ series, seriesUrl, path, chapter, next, prev, upcoming,
   const lastSwipe = useRef(0);
   const toolbar = useRef<HTMLDivElement>(null);
   const previousMode = useRef<ReaderMode>(mode);
+  const turn = useRef(1);
+  const warmed = useRef(new Set<string>());
+  const chrome = useReaderChrome();
   const cover = chapter.cover_id ? artUrl(chapter.cover_id, "full") : null;
   const offline = useOfflineChapter(path, chapter.revision, [...(cover ? [cover] : []),
     ...chapter.pages.map((item) => artUrl(item.asset_id, "full"))]);
@@ -65,14 +80,20 @@ export function Reader({ series, seriesUrl, path, chapter, next, prev, upcoming,
   useEffect(() => {
     const query = new URLSearchParams(window.location.search).get("page");
     const stored = getLocal("progress")[path]?.page;
-    const wanted = query && /^\d+$/.test(query) ? Number(query) : stored ?? minimum;
+    const hasPageLink = query !== null && /^\d+$/.test(query);
+    const wanted = hasPageLink ? Number(query) : stored ?? minimum;
     const index = clamp(wanted);
     const savedMode = defaultLayout
       ? (getLocal("seriesLayouts")[seriesUrl] ?? defaultLayout).mode : getLocal("prefs").mode;
     setPage(index);
+    setOpening(!hasPageLink && stored === undefined && total > 0
+      && !window.matchMedia("(prefers-reduced-motion: reduce)").matches);
     setReady(true);
-    if (savedMode === "vertical" && index > minimum) requestAnimationFrame(() => scrollToPage(index));
-  }, [path, minimum, clamp, scrollToPage, defaultLayout, seriesUrl]);
+    if (savedMode === "vertical" && index > minimum) {
+      const frame = requestAnimationFrame(() => scrollToPage(index));
+      return () => cancelAnimationFrame(frame);
+    }
+  }, [path, minimum, total, clamp, scrollToPage, defaultLayout, seriesUrl]);
 
   useEffect(() => {
     const media = window.matchMedia("(min-width: 850px)");
@@ -98,11 +119,17 @@ export function Reader({ series, seriesUrl, path, chapter, next, prev, upcoming,
         const point = (window.innerHeight + (toolbar.current?.offsetHeight ?? 0)) * 0.53;
         let nearest: number | undefined;
         let distance = Infinity;
-        for (const [index, element] of figures.current) {
+        let first = minimum;
+        let last = total;
+        while (first <= last) {
+          const index = Math.floor((first + last) / 2);
+          const element = figures.current.get(index);
+          if (!element) break;
           const box = element.getBoundingClientRect();
           const next = Math.max(box.top - point, point - box.bottom, 0);
           if (next < distance) { distance = next; nearest = index; }
           if (next === 0) break;
+          if (point < box.top) last = index - 1; else first = index + 1;
         }
         if (nearest !== undefined) setPage(nearest);
       });
@@ -113,7 +140,20 @@ export function Reader({ series, seriesUrl, path, chapter, next, prev, upcoming,
       if (frame.current !== null) cancelAnimationFrame(frame.current);
       frame.current = null;
     };
-  }, [mode, ready]);
+  }, [minimum, mode, ready, total]);
+
+  useEffect(() => {
+    if (mode !== "vertical" || !pageLayout.current || !("IntersectionObserver" in window)) return;
+    const observer = new IntersectionObserver((entries) => {
+      for (const { target, isIntersecting } of entries) {
+        const figure = target as HTMLElement;
+        figure.toggleAttribute("data-nearby", isIntersecting);
+        if (isIntersecting) figure.dataset.revealed = "true";
+      }
+    }, { rootMargin: "24px 0px", threshold: 0 });
+    pageLayout.current.querySelectorAll(".manga-page").forEach((figure) => observer.observe(figure));
+    return () => observer.disconnect();
+  }, [mode]);
 
   useEffect(() => {
     const previous = previousMode.current;
@@ -133,21 +173,44 @@ export function Reader({ series, seriesUrl, path, chapter, next, prev, upcoming,
 
   const setIndex = useCallback((index: number) => {
     const next = clamp(index);
+    if (next !== page) turn.current = Math.sign(next - page);
     setPage(next);
+    setOpening(false);
     if (mode === "vertical") scrollToPage(next);
     else if ((root.current?.querySelector(".reader-stage")?.getBoundingClientRect().bottom ?? Infinity) < 0) {
       window.scrollTo({ top: 0, behavior: "instant" });
     }
-  }, [clamp, mode, scrollToPage]);
+  }, [clamp, mode, page, scrollToPage]);
+
+  useEffect(() => {
+    if (!opening || page !== minimum || settingsOpen) return;
+    const timeout = window.setTimeout(() => {
+      if (cover && !document.hidden && !window.matchMedia("(prefers-reduced-motion: reduce)").matches
+        && !document.querySelector("dialog[open], .opening-card :focus-visible")
+        && (mode !== "vertical" || window.scrollY < 100)) setIndex(1);
+      else setOpening(false);
+    }, 2000);
+    return () => window.clearTimeout(timeout);
+  }, [cover, minimum, mode, opening, page, setIndex, settingsOpen]);
 
   const spreadStart = page > 0 ? 2 * Math.floor((page - 1) / 2) + 1 : 0;
   const firstVisible = mode === "spread" ? spreadStart : page;
   const lastVisible = mode === "spread" && page > 0 ? Math.min(firstVisible + 1, total) : page;
+  const scale = (zoomed ? Math.max(150, prefs.zoom) : prefs.zoom) / 100;
+  const guideVisible = ready && !guideSeen && mode !== "vertical" && page > 0 && total > 0 && !opening && scale <= 1;
+  const dismissGuide = useCallback(() => setLocal("tapGuideSeen", true), []);
   const move = useCallback((delta: -1 | 1) => {
+    if (!total) return;
+    if (guideVisible) dismissGuide();
+    if (delta === 1 && lastVisible >= total && mode !== "vertical") {
+      ending.current?.focus({ preventScroll: true });
+      ending.current?.scrollIntoView({ block: "start", behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth" });
+      return;
+    }
     if (mode !== "spread") setIndex(page + delta);
     else if (page === 0) { if (delta === 1) setIndex(1); }
     else setIndex(delta === 1 ? (lastVisible < total ? lastVisible + 1 : page) : firstVisible - 2);
-  }, [firstVisible, lastVisible, mode, page, setIndex, total]);
+  }, [dismissGuide, firstVisible, guideVisible, lastVisible, mode, page, setIndex, total]);
 
   useEffect(() => {
     function key(event: KeyboardEvent) {
@@ -162,16 +225,31 @@ export function Reader({ series, seriesUrl, path, chapter, next, prev, upcoming,
     return () => window.removeEventListener("keydown", key);
   }, [mode, move, rtl]);
 
-  useEffect(() => {
-    if (!ready) return;
-    const preload = chapter.pages.slice(lastVisible, lastVisible + 3).map((item) => {
+  const preload = useCallback((urls: string[]) => {
+    if (!canPreload()) return;
+    for (const url of urls) {
+      if (warmed.current.has(url)) continue;
+      warmed.current.add(url);
       const image = new Image();
       image.fetchPriority = "low";
-      image.src = artUrl(item.asset_id, "full");
-      return image;
-    });
-    return () => { preload.length = 0; };
-  }, [chapter.pages, lastVisible, ready]);
+      image.onerror = () => warmed.current.delete(url);
+      image.src = url;
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!ready || lastVisible >= total) return;
+    const timeout = window.setTimeout(() => preload(chapter.pages.slice(lastVisible, lastVisible + 2)
+      .map((item) => artUrl(item.asset_id, "full"))), 160);
+    return () => window.clearTimeout(timeout);
+  }, [chapter.pages, lastVisible, preload, ready, total]);
+
+  const nearEnd = lastVisible >= Math.max(1, total - 2);
+  useEffect(() => {
+    if (!ready || !nearEnd || !nextArtwork.length) return;
+    const timeout = window.setTimeout(() => preload(nextArtwork), 400);
+    return () => window.clearTimeout(timeout);
+  }, [nearEnd, nextArtwork, preload, ready]);
 
   function changePrefs(change: Partial<ReaderPrefs>) {
     setLocal("prefs", { ...getLocal("prefs"), ...change });
@@ -203,6 +281,7 @@ export function Reader({ series, seriesUrl, path, chapter, next, prev, upcoming,
   function openSettings() {
     const position = window.scrollY;
     dialog.current?.showModal();
+    setSettingsOpen(true);
     if (position !== window.scrollY) window.scrollTo({ top: position, behavior: "instant" });
   }
 
@@ -210,33 +289,42 @@ export function Reader({ series, seriesUrl, path, chapter, next, prev, upcoming,
   const counter = page === 0 ? `Cover · ${total} pages` : total
     ? `${firstVisible === lastVisible ? page : `${firstVisible}–${lastVisible}`} / ${total}` : "0 / 0";
   const progress = total ? lastVisible / total : 0;
-  const scale = (zoomed ? Math.max(150, prefs.zoom) : prefs.zoom) / 100;
 
-  function drawPage(item: PageArt, index: number, loading: "eager" | "lazy") {
+  const drawPage = useCallback((item: PageArt, index: number, eager: boolean) => {
     return <figure key={index} className="manga-page" data-page={index} style={{ "--page-ratio": item.width / item.height } as React.CSSProperties} ref={(element) => {
       if (element) figures.current.set(index, element); else figures.current.delete(index);
     }}>
-      <img src={artUrl(item.asset_id, "full")} alt={item.alt || `${series}, chapter ${chapter.number}, page ${index}`}
-        width={item.width} height={item.height} loading={loading} decoding="async" draggable={false} />
+      <ReaderArtwork key={item.asset_id} item={item} alt={item.alt || `${series}, chapter ${chapter.number}, page ${index}`} eager={eager} />
       {watermark && <span className="watermark" aria-hidden="true">{watermark}</span>}
     </figure>;
-  }
+  }, [chapter.number, series, watermark]);
 
-  const titleCard = cover && <section className="opening-card" aria-label="Chapter cover" ref={(element) => {
+  const verticalPages = useMemo(() => mode === "vertical"
+    ? chapter.pages.map((item, index) => drawPage(item, index + 1, index === 0)) : null,
+  [chapter.pages, drawPage, mode]);
+
+  const titleCard = cover && <section className={`opening-card${opening && page === 0 ? " opening-active" : ""}`} aria-label="Chapter cover" ref={(element) => {
     if (element) figures.current.set(0, element); else figures.current.delete(0);
   }}>
-    <img src={cover} alt={`${chapter.title} cover`} />
+    <img src={cover} alt={`${chapter.title} cover`} decoding="async" />
     {watermark && <span className="watermark" aria-hidden="true">{watermark}</span>}
     <div><span>Chapter {numberLabel(chapter.number)}</span><h2>{chapter.title}</h2>
-      <button className="button primary" onClick={() => setIndex(1)}><BookOpen size={18} /> Begin chapter</button></div>
+      {total > 0 && <button className="button primary" onClick={() => {
+        setIndex(1);
+        pageLayout.current?.focus({ preventScroll: true });
+      }}><BookOpen size={18} /> Begin chapter</button>}</div>
   </section>;
-  const visible = mode === "vertical" ? chapter.pages.map((item, index) => drawPage(item, index + 1, index < 1 ? "eager" : "lazy"))
-    : page > 0 ? chapter.pages.slice(firstVisible - 1, lastVisible).map((item, i) => drawPage(item, firstVisible + i, "eager")) : [];
+  const visible = mode === "vertical" ? verticalPages
+    : page > 0 ? chapter.pages.slice(firstVisible - 1, lastVisible).map((item, i) => drawPage(item, firstVisible + i, true)) : [];
   const nav = <ChapterNav prev={prev} next={next} seriesUrl={seriesUrl}
     upcoming={mode === "vertical" || lastVisible >= total ? upcoming : undefined} />;
+  const atEnd = total > 0 && (mode === "vertical" || lastVisible >= total);
+  const transition = prefs.transition ?? "fade";
+  const turnDirection = turn.current * (rtl ? -1 : 1);
 
-  return <main className="reader" id="main" ref={root}>
-    <div className="reader-toolbar" ref={toolbar}>
+  return <main className="reader" id="main" ref={root} data-chrome-hidden={chrome.hidden && ready && total > 0 && page > 0 && !opening && !settingsOpen}
+    onClick={chrome.show} onFocusCapture={chrome.show}>
+    <div className="reader-toolbar reader-chrome" ref={toolbar}>
       <div className="reader-control-row">
         <div className="reader-identity">
           <a className="icon-button" href={seriesUrl} aria-label="Back to series"><ChevronLeft size={21} /></a>
@@ -244,7 +332,7 @@ export function Reader({ series, seriesUrl, path, chapter, next, prev, upcoming,
         </div>
         <div className="reader-controls">
           <span className="reader-count" aria-live={mode === "vertical" ? "off" : "polite"}>{counter}</span>
-          <button className="icon-button" title="Bookmark this page" aria-pressed={bookmarked} aria-label="Bookmark this page" disabled={!total}
+          <button className="icon-button reaction-button" title="Bookmark this page" aria-pressed={bookmarked} aria-label="Bookmark this page" disabled={!total}
             onClick={bookmark}><Bookmark size={19} fill={bookmarked ? "currentColor" : "none"} /></button>
           <button className="icon-button" title="Reader settings" aria-label="Reader settings" onClick={openSettings}><Settings2 size={20} /></button>
           {fullscreenAvailable && <button className="icon-button fullscreen-button" title={fullscreen ? "Exit fullscreen" : "Fullscreen"}
@@ -260,7 +348,10 @@ export function Reader({ series, seriesUrl, path, chapter, next, prev, upcoming,
 
     <div className="reader-stage" style={{ background: backgrounds[prefs.background] }}>
       <div className={`reader-layout ${mode} ${mode === "spread" && rtl ? "reader-rtl" : ""} ${scale > 1 ? "is-zoomed" : ""}`}
-        style={{ "--reader-scale": scale, "--reader-brightness": prefs.brightness / 100 } as React.CSSProperties}
+        ref={pageLayout} tabIndex={-1} data-transition={transition}
+        style={{ "--reader-scale": scale, "--reader-brightness": prefs.brightness / 100,
+          "--turn-offset": `${turnDirection * 25}px`, "--turn-angle": `${turnDirection * -23}deg`,
+          "--turn-edge": turnDirection > 0 ? "left center" : "right center" } as React.CSSProperties}
         onTouchStart={(event) => {
           if (mode === "vertical" || scale > 1 || event.touches.length !== 1) return;
           touch.current = { x: event.touches[0].clientX, y: event.touches[0].clientY };
@@ -277,8 +368,9 @@ export function Reader({ series, seriesUrl, path, chapter, next, prev, upcoming,
         }}>
         {(mode === "vertical" || page === 0) && titleCard}
         {visible}
-        {!total && <p className="empty-box">This chapter has no pages yet.</p>}
-        {mode !== "vertical" && page > 0 && total > 0 && <div className="tap-zones">
+        {!total && <div className="empty-box reader-empty"><BookOpen aria-hidden="true" /><h2>No pages yet</h2>
+          <p>Pages will appear here when they’re ready.</p></div>}
+        {mode !== "vertical" && page > 0 && total > 0 && scale <= 1 && <div className="tap-zones">
           <button tabIndex={-1} aria-label={rtl ? "Next page on left" : "Previous page on left"} onClick={() => {
             if (Date.now() - lastSwipe.current > 300) move(rtl ? 1 : -1);
           }} />
@@ -286,22 +378,43 @@ export function Reader({ series, seriesUrl, path, chapter, next, prev, upcoming,
             if (Date.now() - lastSwipe.current > 300) move(rtl ? -1 : 1);
           }} />
         </div>}
+        {!cover && opening && page === 1 && <div className="opening-caption">
+          <span>Chapter {numberLabel(chapter.number)}</span><strong>{chapter.title}</strong>
+          <button className="button secondary" onClick={() => {
+            setIndex(1);
+            pageLayout.current?.focus({ preventScroll: true });
+          }}>Begin chapter</button>
+        </div>}
       </div>
-      {mode !== "vertical" && <div className="page-nav">
+      {guideVisible && <aside className="tap-guide" aria-label="Tap zones tutorial">
+        <div><strong>Tap to turn pages</strong><span>Tap an edge or swipe. Tap the middle to show controls.</span></div>
+        <button className="icon-button" aria-label="Dismiss tap zones tutorial" onClick={dismissGuide}><X size={18} /></button>
+        <div className="tap-guide-zones" aria-hidden="true"><span>{rtl ? "Next page" : "Previous page"}</span><span>Controls</span>
+          <span>{rtl ? "Previous page" : "Next page"}</span></div>
+      </aside>}
+      {mode !== "vertical" && total > 0 && <div className="page-nav">
         <button className="button secondary" disabled={firstVisible <= minimum} onClick={() => move(-1)}><ChevronLeft size={18} /> Previous page</button>
         <button className="button secondary" onClick={() => setZoomed(!zoomed)} aria-pressed={zoomed} aria-label="Quick zoom"><Expand size={17} /></button>
         <button className="button primary" disabled={lastVisible >= total} onClick={() => move(1)}>Next page <ChevronRight size={18} /></button>
       </div>}
     </div>
 
-    <div className="reader-end">
+    <section className="reader-end" ref={ending} aria-label="Chapter ending" tabIndex={-1}>
       {chapter.note && <aside className="author-note"><h2>Author’s note</h2><p>{chapter.note}</p></aside>}
-      {nav}
+      {atEnd ? <div className="chapter-complete">
+        <span className="section-icon"><Check size={21} aria-hidden="true" /></span>
+        <div><h2>End of chapter</h2><p>{chapter.title}</p></div>
+        {nav}
+      </div> : nav}
       <ReaderSocial id={chapter.id} path={path} title={`${series} · ${chapter.title}`} comments={comments} reactionsAvailable={reactionsAvailable}
         initial={{ views: chapter.views, likes: chapter.likes }} />
-    </div>
+    </section>
 
-    <dialog className="small-dialog reader-dialog" ref={dialog} aria-label="Reader settings">
+    {total > 0 && <div className="reader-bottom reader-chrome">
+      <PageScrubber page={page} pages={chapter.pages} cover={chapter.cover_id} rtl={mode !== "vertical" && rtl} onJump={setIndex} />
+    </div>}
+
+    <dialog className="small-dialog reader-dialog" ref={dialog} aria-label="Reader settings" onClose={() => setSettingsOpen(false)}>
       <div className="split-heading"><h2><PanelTop size={21} /> Reader settings</h2>
         <button className="icon-button" aria-label="Close settings" onClick={() => dialog.current?.close()}><X size={20} /></button></div>
       <div className="reader-setting-grid">
@@ -311,6 +424,9 @@ export function Reader({ series, seriesUrl, path, chapter, next, prev, upcoming,
         <label>Reading direction<select value={mode === "vertical" ? "vertical" : rtl ? "rtl" : "ltr"}
           onChange={(event) => changeDirection(event.target.value as Direction)}>
           <option value="vertical">Vertical</option><option value="rtl">Right to left</option><option value="ltr">Left to right</option>
+        </select></label>
+        <label>Page transition<select value={transition} onChange={(event) => changePrefs({ transition: event.target.value as PageTransition })}>
+          <option value="fade">Fade</option><option value="slide">Slide</option><option value="page-flip">Page flip</option>
         </select></label>
         <label>Brightness <span>{prefs.brightness}%</span><input type="range" min="35" max="110" value={prefs.brightness}
           onChange={(event) => changePrefs({ brightness: Number(event.target.value) })} /></label>

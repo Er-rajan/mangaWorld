@@ -7,8 +7,10 @@ import { defaultTheme, resolveTheme, themeStorageKey, type Theme } from "./theme
 export type SavedPage = {
   path: string; series: string; chapter: string; page: number; total: number; updated: number;
 };
-export type ReaderPrefs = ReaderLayout & { zoom: number; brightness: number; background: "ink" | "paper" | "gray" };
-export const defaultReader: ReaderPrefs = { mode: "vertical", direction: "rtl", zoom: 100, brightness: 100, background: "ink" };
+export type PageTransition = "fade" | "slide" | "page-flip";
+export type ReaderPrefs = ReaderLayout & { zoom: number; brightness: number; background: "ink" | "paper" | "gray";
+  transition?: PageTransition };
+export const defaultReader: ReaderPrefs = { mode: "vertical", direction: "rtl", zoom: 100, brightness: 100, background: "ink", transition: "fade" };
 
 type LocalValues = {
   theme: Theme;
@@ -17,11 +19,12 @@ type LocalValues = {
   bookmarks: SavedPage[];
   prefs: ReaderPrefs;
   seriesLayouts: Record<string, ReaderLayout>;
+  tapGuideSeen: boolean;
   visitor: string;
   likes: string[];
 };
 const defaults: LocalValues = { theme: defaultTheme, follows: [], progress: {}, bookmarks: [], prefs: defaultReader,
-  seriesLayouts: {}, visitor: "", likes: [] };
+  seriesLayouts: {}, tapGuideSeen: false, visitor: "", likes: [] };
 const data = new Map<string, { raw: string | null; value: unknown }>();
 const prefix = "nightfolio:";
 const changed = "nightfolio-local";

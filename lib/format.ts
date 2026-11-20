@@ -15,6 +15,10 @@ export function chapterArt(series: Series, chapter: ChapterSummary) {
   return chapter.cover_id ?? chapter.first_page ?? series.cover_id;
 }
 
+export function readerThumbnail(id: string) {
+  return id.startsWith("/manga/") ? id.replace(/\.webp$/, "-preview.webp") : artUrl(id, "thumb");
+}
+
 export function isNew(date: string, now = Date.now()) {
   const age = now - Date.parse(date);
   return age >= 0 && age < 14 * 86400000;
