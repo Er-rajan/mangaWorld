@@ -21,7 +21,7 @@ export function readerThumbnail(id: string) {
 
 export function isNew(date: string, now = Date.now()) {
   const age = now - Date.parse(date);
-  return age >= 0 && age < 14 * 86400000;
+  return age >= 0 && age < 7 * 86400000;
 }
 
 export function shortDate(date: string) {

@@ -22,14 +22,17 @@ export default async function LibraryLayout({ children }: { children: React.Reac
       <div className="site-width footer-inner">
         <div>
           <Brand />
-          <p>Original manga by <Link href="/about">{authorName}</Link></p>
+          <p>© {authorName}</p>
         </div>
         <nav aria-label="Footer">
-          <Link href="/about">About the author</Link>
+          <Link href="/">Home</Link>
+          <Link href="/#series">Manga</Link>
+          <Link href="/about" aria-label="About the author">About</Link>
           <Link href="/admin">Admin</Link>
           <a className="button secondary instagram-link" href={instagramUrl} target="_blank" rel="noreferrer">
-            <Instagram size={17} aria-hidden="true" /> <span>{instagramHandle}</span>
+            <Instagram size={17} aria-hidden="true" /> <span>Instagram <span className="sr-only">{instagramHandle}</span></span>
           </a>
+          <a href="#top" className="button secondary">Back to top</a>
         </nav>
       </div>
     </footer>

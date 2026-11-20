@@ -38,7 +38,7 @@ test("Manga World branding, author, footer Instagram and persistent themes", asy
   await page.goto(starter);
   await expect(page).toHaveTitle(/Manga World/);
   await expect(page.locator("header").getByRole("link", { name: "Manga World home" })).toBeVisible();
-  await expect(page.locator("footer").getByRole("link", { name: "@ur.rajan" }))
+  await expect(page.locator("footer").getByRole("link", { name: /Instagram.*@ur\.rajan/ }))
     .toHaveAttribute("href", "https://www.instagram.com/ur.rajan/");
   const picker = page.getByRole("combobox", { name: "Site theme" });
   for (const theme of ["sakura", "ink", "light", "dark", "sakura"]) {

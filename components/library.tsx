@@ -1,6 +1,6 @@
 "use client";
 
-import { BookOpen, ChevronRight, History, Instagram, Layers3, LibraryBig } from "lucide-react";
+import { BookOpen, ChevronRight, Instagram, Layers3, LibraryBig } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { Art } from "./art";
@@ -115,7 +115,9 @@ export function SeriesCard({ series }: { series: Series }) {
   const count = series.chapters.length;
   const latest = latestReleasedChapter(series.chapters);
   const artwork = poster(series);
-  return <Link href={seriesLink(series)} className="series-card" data-cover-accent>
+  const first = series.chapters[0];
+  return <article className="series-card-frame">
+    <Link href={seriesLink(series)} className="series-card" data-cover-accent>
     <div className={`card-art${artwork ? "" : " card-without-cover"}`}>
       {artwork ? <img src={artwork} alt="" loading="lazy" decoding="async" ref={applyCoverAccent}
         onLoad={(event) => applyCoverAccent(event.currentTarget)} />
@@ -129,7 +131,9 @@ export function SeriesCard({ series }: { series: Series }) {
       <div className="card-meta"><BookOpen size={15} /> {count ? `${count} ${count === 1 ? "chapter" : "chapters"}` : "Series details"}<ChevronRight size={16} /></div>
       {latest && <p className="card-latest" title={latest.title}>Latest · Chapter {numberLabel(latest.number)} · {latest.title}</p>}
     </div>
-  </Link>;
+    </Link>
+    {first && <a className="button primary card-read" href={chapterLink(series, first)} aria-label={`Read ${series.title}`}>Read</a>}
+  </article>;
 }
 
 export function ChapterRow({ series, chapter, today, libraryRow = false, recent = false }: {
@@ -156,8 +160,10 @@ export function ContinueReading({ series }: { series: Series[] }) {
   if (!entry) return null;
   const { item, chapter } = readable.get(entry.path)!;
   return <a className="resume-strip" href={`${entry.path}?page=${entry.page}`}>
-    <span className="section-icon"><History size={21} /></span>
-    <span><strong>Continue reading</strong><small>{item.title} · {chapter.title} · Page {entry.page} of {entry.total}</small></span>
+    <Art id={chapterArt(item, chapter) ?? chapter.thumbnail_id} className="resume-art" />
+    <span><strong>Continue reading</strong><small>{item.title} · {chapter.title}</small>
+      <span className="resume-progress"><progress value={entry.page} max={entry.total} aria-label="Reading progress" />
+        <small>Page {entry.page} of {entry.total}</small></span></span>
     <ChevronRight size={19} />
   </a>;
 }
@@ -197,6 +203,7 @@ export function BrowseLibrary({ series, today }: { series: Series[]; today: numb
         <BookOpen size={25} aria-hidden="true" />
         <p>New chapters will appear here.</p>
       </div>}
+      <Link href="/chapters" className="all-chapters-link">View all chapters</Link>
       <div className="author-card">
         <Instagram size={22} aria-hidden="true" />
         <div><h3>Follow {authorName}</h3><p>Artwork and news from the author.</p></div>
@@ -206,12 +213,45 @@ export function BrowseLibrary({ series, today }: { series: Series[]; today: numb
   </div>;
 }
 
-export function Hero({ series }: { series?: Series }) {
+export function Hero({ featured }: { featured: Series[] }) {
+  const [index, setIndex] = useState(0);
+  const [paused, setPaused] = useState(false);
+  const [interacting, setInteracting] = useState(false);
+  const start = useRef<{ x: number; y: number } | null>(null);
+  const rotating = featured.length > 1;
+  const active = index % Math.max(1, featured.length);
+  const series = featured[active];
   const first = series?.chapters[0];
+  const latest = series && latestReleasedChapter(series.chapters);
   const customArtwork = series?.hero ?? (series?.cover_id ? artUrl(series.cover_id, "full") : undefined);
   const heroStyle = series?.hero ? "hero hero-series-art" : customArtwork ? "hero" : "hero hero-world";
   const haze = series ? poster(series) : undefined;
-  return <section className={heroStyle} aria-labelledby="hero-title" data-cover-accent>
+  useEffect(() => {
+    if (!rotating || paused || interacting) return;
+    const motion = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const timer = window.setInterval(() => {
+      if (!motion.matches && !document.hidden) setIndex((current) => (current + 1) % featured.length);
+    }, 8000);
+    return () => window.clearInterval(timer);
+  }, [featured.length, interacting, paused, rotating]);
+
+  return <div className="hero-carousel" onMouseEnter={() => setInteracting(true)} onMouseLeave={() => {
+    if (!document.activeElement?.closest(".hero-carousel")) setInteracting(false);
+  }} onFocusCapture={() => setInteracting(true)} onBlurCapture={(event) => {
+    if (!event.currentTarget.contains(event.relatedTarget) && !event.currentTarget.matches(":hover")) setInteracting(false);
+  }} onTouchStart={(event) => {
+    if (rotating && event.touches.length === 1) start.current = { x: event.touches[0].clientX, y: event.touches[0].clientY };
+  }} onTouchCancel={() => { start.current = null; }} onTouchEnd={(event) => {
+    const origin = start.current;
+    start.current = null;
+    const touch = event.changedTouches[0];
+    if (!origin || !touch) return;
+    const delta = touch.clientX - origin.x;
+    if (Math.abs(delta) > 48 && Math.abs(delta) > Math.abs(touch.clientY - origin.y) * 1.4) {
+      setIndex((active + featured.length + (delta < 0 ? 1 : -1)) % featured.length);
+    }
+  }}>
+    <section key={series?.id} className={heroStyle} aria-labelledby="hero-title" data-cover-accent>
     {haze && <img className="hero-haze" src={haze} alt="" decoding="async" ref={applyCoverAccent}
       onLoad={(event) => applyCoverAccent(event.currentTarget)} />}
     <img className={`hero-art${series?.cover_id && !series.hero ? " cover-hero" : ""}`} src={customArtwork ?? siteBanner} alt="" fetchPriority="high" />
@@ -219,12 +259,20 @@ export function Hero({ series }: { series?: Series }) {
       <div className="hero-eyebrow"><span className="hero-dot" />{series ? "Featured manga" : "Independent manga library"}</div>
       <h1 id="hero-title">{series?.title ?? siteName}</h1>
       <p className="hero-author">By <Link href="/about">{authorName}</Link></p>
-      <p>{series?.description || (series && !first ? "Chapters coming soon." : "Original manga, published one chapter at a time.")}</p>
+      <p className="hero-tagline">{series?.description || (series && !first ? "Chapters coming soon." : "Original manga, published one chapter at a time.")}</p>
+      {series && <div className="hero-meta"><SeriesStatus series={series} /><span>{series.chapters.length} {series.chapters.length === 1 ? "chapter" : "chapters"}</span></div>}
       {series && <div className="hero-actions">
         {first && <a href={chapterLink(series, first)} className="button primary"><BookOpen size={18} /> Start reading</a>}
+        {latest && <a href={chapterLink(series, latest)} className="button hero-secondary">Read latest chapter</a>}
         <Link href={seriesLink(series)} className={`button ${first ? "hero-secondary" : "primary"}`}>Series details <ChevronRight size={17} /></Link>
       </div>}
     </div>
     {series?.tags.length ? <div className="hero-tags">{series.tags.slice(0, 3).map((tag) => <span key={tag}>{tag}</span>)}</div> : null}
-  </section>;
+    </section>
+    {rotating && <nav className="hero-pager" aria-label="Featured series">
+      {featured.map((item, position) => <button key={item.slug} aria-label={`Show ${item.title}`} aria-current={position === active ? "true" : undefined}
+        onClick={() => setIndex(position)}><span /></button>)}
+      <button className="hero-pause" onClick={() => setPaused(!paused)}>{paused ? "Resume" : "Pause"} rotation</button>
+    </nav>}
+  </div>;
 }

@@ -34,7 +34,7 @@ export function SiteHeader({ search }: { search: Result[] }) {
     return () => window.removeEventListener("keydown", shortcut);
   }, []);
 
-  return <header className="site-header">
+  return <header className="site-header" id="top">
     <div className="site-width header-inner">
       <Brand />
       <nav className="site-nav" aria-label="Main">
