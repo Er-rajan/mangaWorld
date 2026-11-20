@@ -90,6 +90,10 @@ export const rajanChapters = [
       "Rajan and Dandveer trade blows amid chains, lightning and shattered stone.",
       "Rajan fights his way through a shower of glowing spears.",
       "Rajan’s lightning strike shatters Dandveer’s armor, and both fighters prepare to clash again.",
+      "Dandveer removes his blindfold and attacks Rajan with a massive chain in the ruined court.",
+      "Dandveer unleashes his final sentence, and Rajan realizes the pressure is coming from the scales.",
+      "Rajan calls on Thor and clashes with Dandveer, who falls as the court crumbles.",
+      "Rajan discovers a divine file revealing eight active god heirs at Devgarh Public School.",
     ],
-  }], { omittedPages: [5, 6], revision: 2 }),
+  }], { omittedPages: [5, 6], revision: 3 }),
 ];

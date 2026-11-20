@@ -120,7 +120,7 @@ test("Rajan Chapter 2 follows Chapter 1 and shows all seventeen pages in filenam
     .toHaveAttribute("href", readerPath + "/chapter-1");
 });
 
-test("Rajan Chapter 3 is the latest chapter and skips original pages five and six", async ({ page }) => {
+test("Rajan Chapter 3 skips original pages five and six and ends with the four continuation pages", async ({ page }) => {
   const readerPath = "/read/rajan-the-thor-curse";
   await page.goto(site + "/series/rajan-the-thor-curse");
   await expect(page.getByRole("link", { name: "Latest chapter", exact: true })).toHaveAttribute("href", readerPath + "/chapter-3");
@@ -131,9 +131,9 @@ test("Rajan Chapter 3 is the latest chapter and skips original pages five and si
 
   const next = page.getByRole("button", { name: "Next page", exact: true });
   const image = page.locator(".manga-page img");
-  const originalPages = [1, 2, 3, 4, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20];
+  const originalPages = [1, 2, 3, 4, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24];
   for (const [index, number] of originalPages.entries()) {
-    await expect(page.locator(".reader-count")).toHaveText(`${index + 1} / 18`);
+    await expect(page.locator(".reader-count")).toHaveText(`${index + 1} / ${originalPages.length}`);
     await expect(image).toHaveCount(1);
     await expect(image).toHaveAttribute("src", `/manga/rajan-the-thor-curse/chapter-3/page-${String(number).padStart(2, "0")}.webp`);
     expect(await image.evaluate(async (artwork: HTMLImageElement) => {
