@@ -2,7 +2,7 @@
 
 import { BookOpen, ChevronRight, Instagram, Layers3, LibraryBig } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { artUrl, chapterLink, chapterThumbnail, fullDate, isNew, latestReleasedChapter, numberLabel, releaseAge, seriesLink } from "@/lib/format";
 import { useLocal } from "@/lib/local";
 import type { ChapterSummary, Series } from "@/lib/types";
@@ -110,17 +110,17 @@ export function SeriesStatus({ series }: { series: Series }) {
   }</span>;
 }
 
-export function SeriesCard({ series }: { series: Series }) {
+export function SeriesCard({ series, backdrop }: { series: Series; backdrop?: ReactNode }) {
   const count = series.chapters.length;
   const latest = latestReleasedChapter(series.chapters);
   const artwork = poster(series);
   const first = series.chapters[0];
   return <article className="series-card-frame" data-cover-accent>
     <Link href={seriesLink(series)} className="series-card" prefetch={false}>
-    <div className={`card-art${artwork ? "" : " card-without-cover"}`}>
-      {artwork ? <ResponsiveArt asset={artwork} artwork={series.cover_id ? series.coverArtwork : artwork === series.hero_id ? series.heroArtwork : undefined}
+    <div className={`card-art${artwork || backdrop ? "" : " card-without-cover"}`}>
+      {backdrop ?? (artwork ? <ResponsiveArt asset={artwork} artwork={series.cover_id ? series.coverArtwork : artwork === series.hero_id ? series.heroArtwork : undefined}
         alt="" sizes={cardSizes} onReady={applyCoverAccent} />
-        : <BookOpen className="card-illustration" size={98} strokeWidth={.85} aria-hidden="true" />}
+        : <BookOpen className="card-illustration" size={98} strokeWidth={.85} aria-hidden="true" />)}
       <SeriesStatus series={series} />
       <div className="card-title"><h3>{series.title}</h3></div>
     </div>
@@ -187,7 +187,12 @@ export function BrowseLibrary({ series, today }: { series: Series[]; today: numb
         {tags.map((value) => <button key={value} aria-pressed={tag === value} onClick={() => setTag(value)}>{value}</button>)}
       </div>}
       {selected.length ? <div className="series-carousel carousel-track" id="series-carousel" ref={seriesCarousel.track}>
-        {selected.map((entry) => <SeriesCard key={entry.id} series={entry} />)}
+        {selected.map((entry) => <SeriesCard key={entry.id} series={entry}
+          backdrop={entry.slug === "rajan-the-thor-curse" ? <picture>
+            <source media="(prefers-reduced-motion: reduce)" srcSet="/manga/rajan-the-thor-curse/browse-backdrop-still.webp" />
+            <img src="/manga/rajan-the-thor-curse/browse-backdrop.webp" alt="" width={547} height={306} loading="lazy" decoding="async"
+              style={{ width: "100%", height: "100%", objectPosition: "57% center" }} onLoad={(event) => applyCoverAccent(event.currentTarget)} />
+          </picture> : undefined} />)}
       </div> : <p className="empty-box">The first series is on its way.</p>}
     </section>
     <aside className="library-sidebar" aria-labelledby="latest-title">
