@@ -28,6 +28,7 @@ export default async function LibraryLayout({ children }: { children: React.Reac
           <Link href="/">Home</Link>
           <Link href="/#series">Manga</Link>
           <Link href="/about" aria-label="About the author">About</Link>
+          <Link href="/reels" prefetch={false}>Reels</Link>
           <Link href="/admin">Admin</Link>
           <a className="button secondary instagram-link" href={instagramUrl} target="_blank" rel="noreferrer">
             <Instagram size={17} aria-hidden="true" /> <span>Instagram <span className="sr-only">{instagramHandle}</span></span>

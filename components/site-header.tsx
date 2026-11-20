@@ -40,6 +40,7 @@ export function SiteHeader({ search }: { search: Result[] }) {
       <nav className="site-nav" aria-label="Main">
         <Link href="/" aria-current={path === "/" ? "page" : undefined}>Manga</Link>
         <Link href="/about" aria-current={path === "/about" ? "page" : undefined}>About</Link>
+        <Link href="/reels" prefetch={false} aria-current={path === "/reels" ? "page" : undefined}>Reels</Link>
       </nav>
       <div className="header-actions">
         <button className="search-trigger" type="button" onClick={openSearch} aria-label="Search manga">

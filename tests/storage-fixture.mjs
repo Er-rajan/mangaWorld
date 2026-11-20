@@ -13,6 +13,7 @@ const rpc = {
   save_chapter: ["payload", "target", "expected"], track_chapter: ["target", "browser_id", "action", "reaction"],
   export_library: [], claim_unused_art: [], delete_entry: ["kind", "target", "expected"],
   next_chapter_release: ["series"],
+  mutate_reels: ["operation", "payload"], react_to_reel: ["target", "browser", "desired"],
 };
 
 async function seedReader() {
@@ -111,7 +112,7 @@ const server = createServer(async (req, res) => {
       const body = JSON.parse((await read(req)).toString());
       const placeholders = rpc[name].map((_, i) => "$" + (i + 1)).join(",");
       const args = rpc[name].map((key) => body[key]);
-      const set = ["track_chapter", "claim_unused_art", "next_chapter_release"].includes(name);
+      const set = ["track_chapter", "claim_unused_art", "next_chapter_release", "react_to_reel"].includes(name);
       const rows = (await query(`select ${set ? "* from " : ""}public.${name}(${placeholders})${set ? "" : " as value"}`, args)).rows;
       return respond(res, 200, set ? (name === "claim_unused_art" ? rows.map((row) => row[name]) : rows) : rows[0].value);
     }
@@ -135,6 +136,8 @@ const server = createServer(async (req, res) => {
         rows = (await query("select asset_id,width,height,filename,alt from public.chapter_pages where chapter_id = $1 order by position", [chapterId])).rows;
         break;
       case "site_settings": rows = (await query("select author,about,watermark,comments,characters from public.site_settings")).rows; break;
+      case "reels": rows = (await query("select * from public.reels order by position")).rows; break;
+      case "reel_categories": rows = (await query("select id,name from public.reel_categories order by position")).rows; break;
       default: return respond(res, 404);
     }
     return respond(res, 200, req.headers.accept === "application/vnd.pgrst.object+json" ? rows[0] : rows);

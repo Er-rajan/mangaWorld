@@ -14,7 +14,7 @@ export async function openDatabase() {
     grant usage on schema storage to service_role;
     grant all on all tables in schema storage to service_role;
   `);
-  for (const migration of ["001_nightfolio.sql", "002_series_extras.sql"]) {
+  for (const migration of ["001_nightfolio.sql", "002_series_extras.sql", "003_reels.sql"]) {
     await db.exec(await readFile(new URL("../supabase/migrations/" + migration, import.meta.url), "utf8"));
   }
   return db;
