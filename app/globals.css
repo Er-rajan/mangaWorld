@@ -294,6 +294,9 @@ input[type="range"], input[type="checkbox"], progress { accent-color: var(--acce
 .drowned-city-hero { background: radial-gradient(ellipse at 8% 20%, color-mix(in srgb, #22858b 30%, var(--surface)), transparent 64%), var(--surface); }
 .detail-hero-with-art { position: relative; isolation: isolate; overflow: hidden; min-height: 330px; background: #171220; color: #fff5f7; }
 .detail-hero-no-cover { grid-template-columns: minmax(0, 1fr); padding-inline: clamp(22px, 5vw, 52px); }
+.detail-status { display: flex; align-items: center; gap: 9px; font-size: .86rem; }
+.character-profile { display: grid; gap: 8px; align-content: start; }
+.character-portrait { width: 90px; height: 114px; object-fit: cover; border-radius: 8px; }
 .detail-hero-with-art::after { content: ""; position: absolute; inset: 0; z-index: -1; background: linear-gradient(90deg, #171220 4%, #171220fa 25%, #191126b8 47%, #18112408 78%), linear-gradient(0deg, #170d2199, transparent 48%); }
 .detail-backdrop { position: absolute; inset: 0 0 0 auto; z-index: -2; width: 77%; height: 100%; object-fit: cover; object-position: center 39%; }
 .detail-hero-with-art .detail-copy h1, .detail-hero-with-art .detail-copy p { max-width: 540px; }

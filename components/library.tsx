@@ -140,7 +140,7 @@ export function ChapterRow({ series, chapter, today, libraryRow = false, recent 
   series: Series; chapter: ChapterSummary; today: number; libraryRow?: boolean; recent?: boolean;
 }) {
   return <Link prefetch={false} className="chapter-row" href={chapterLink(series, chapter)}>
-    <Art id={chapter.thumbnail_id ?? chapterArt(series, chapter)} />
+    <Art id={chapter.cover_id ?? chapter.thumbnail_id ?? chapterArt(series, chapter)} />
     <div className="chapter-row-text">
       <div className="chapter-kicker">{libraryRow ? series.title : `Chapter ${numberLabel(chapter.number)}`}</div>
       <h3>{chapter.title}</h3>
@@ -160,7 +160,7 @@ export function ContinueReading({ series }: { series: Series[] }) {
   if (!entry) return null;
   const { item, chapter } = readable.get(entry.path)!;
   return <a className="resume-strip" href={`${entry.path}?page=${entry.page}`}>
-    <Art id={chapterArt(item, chapter) ?? chapter.thumbnail_id} className="resume-art" />
+    <Art id={chapter.cover_id ?? chapter.thumbnail_id ?? chapterArt(item, chapter)} className="resume-art" />
     <span><strong>Continue reading</strong><small>{item.title} · {chapter.title}</small>
       <span className="resume-progress"><progress value={entry.page} max={entry.total} aria-label="Reading progress" />
         <small>Page {entry.page} of {entry.total}</small></span></span>

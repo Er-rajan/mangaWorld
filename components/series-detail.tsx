@@ -1,15 +1,33 @@
 "use client";
 
 import { ArrowDownWideNarrow, Bell, BookOpen, Check, Clock3 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Art } from "./art";
 import { ChapterRow, ContinueReading, SeriesStatus } from "./library";
-import { chapterLink, isNew } from "@/lib/format";
+import { CharacterProfiles } from "./character-profiles";
+import { chapterLink, fullDate, isNew } from "@/lib/format";
 import { getLocal, setLocal, useLocal } from "@/lib/local";
 import { drownedCitySlug, upcomingDrownedCityChapter } from "@/lib/drowned-city";
-import type { Series } from "@/lib/types";
+import type { Character, ScheduledRelease, Series } from "@/lib/types";
 
-export function SeriesDetail({ series, today }: { series: Series; today: number }) {
+function ReleaseCountdown({ release, today }: { release: ScheduledRelease; today: number }) {
+  const [now, setNow] = useState(today);
+  const hours = Math.max(0, Math.ceil((Date.parse(release.release_at) - now) / 3_600_000));
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 60_000);
+    return () => window.clearInterval(timer);
+  }, []);
+  return <div className="chapter-row upcoming-row">
+    <span className="upcoming-thumbnail"><Clock3 size={21} aria-hidden="true" /></span>
+    <div className="chapter-row-text"><h3>Chapter {release.number}</h3>
+      <p>Scheduled for <time dateTime={release.release_at}>{fullDate(release.release_at)}</time></p></div>
+    <span className="upcoming-label">{hours >= 24 ? `In ${Math.ceil(hours / 24)} days` : hours ? `In ${hours}h` : "Due now"}</span>
+  </div>;
+}
+
+export function SeriesDetail({ series, today, profiles, scheduled }: {
+  series: Series; today: number; profiles: Character[]; scheduled?: ScheduledRelease;
+}) {
   const [newest, setNewest] = useState(true);
   const follows = useLocal("follows");
   const following = follows.includes(series.slug);
@@ -18,13 +36,15 @@ export function SeriesDetail({ series, today }: { series: Series; today: number 
   const latest = byDate.at(-1);
   const chapters = newest ? byDate.reverse() : byDate;
   const upcoming = upcomingDrownedCityChapter(series);
-  const showCover = !series.hero || Boolean(series.cover_id);
+  const cover = series.cover_id ?? series.chapters[0]?.thumbnail_id;
+  const showCover = !series.hero || Boolean(cover);
   return <main id="main" className="site-width detail-page">
     <section className={`detail-hero${series.slug === drownedCitySlug ? " drowned-city-hero" : ""}${series.hero ? " detail-hero-with-art" : ""}${showCover ? "" : " detail-hero-no-cover"}`}>
       {series.hero && <img className="detail-backdrop" src={series.hero} alt="" fetchPriority="high" />}
-      {showCover && <Art id={series.cover_id} eager full className="detail-cover" />}
+      {showCover && <Art id={cover} alt={cover ? `${series.title} cover` : ""} eager full className="detail-cover" />}
       <div className="detail-copy">
-        <SeriesStatus series={series} />
+        <div className="detail-status"><SeriesStatus series={series} />
+          <span>{chapters.length} {chapters.length === 1 ? "chapter" : "chapters"}</span></div>
         <h1>{series.title}</h1>
         {series.tags.length > 0 && <div className="detail-tags">{series.tags.map((tag) => <span key={tag}>{tag}</span>)}</div>}
         {series.description && <p>{series.description}</p>}
@@ -45,14 +65,19 @@ export function SeriesDetail({ series, today }: { series: Series; today: number 
           <ArrowDownWideNarrow size={17} />{newest ? "Newest first" : "Oldest first"}
         </button>}
       </div>
-      {chapters.length ? <div className="latest-list">
+      {chapters.length || scheduled ? <div className="latest-list">
         {chapters.map((chapter) => <ChapterRow key={chapter.id} series={series} chapter={chapter} today={today} recent={isNew(chapter.release_at, today)} />)}
-        {upcoming !== undefined && <div className="chapter-row upcoming-row">
+        {scheduled && <ReleaseCountdown release={scheduled} today={today} />}
+        {!scheduled && upcoming !== undefined && <div className="chapter-row upcoming-row">
           <span className="upcoming-thumbnail"><Clock3 size={21} aria-hidden="true" /></span>
           <div className="chapter-row-text"><h3>Chapter {upcoming}</h3></div>
           <span className="upcoming-label">Coming soon</span>
         </div>}
       </div> : <p className="empty-box">Chapters coming soon.</p>}
     </section>
+    {profiles.length > 0 && <section className="detail-chapters" aria-labelledby="characters-title">
+      <div className="section-heading"><h2 id="characters-title">Characters</h2></div>
+      <CharacterProfiles profiles={profiles} />
+    </section>}
   </main>;
 }

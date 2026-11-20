@@ -5,8 +5,8 @@ import { useEffect, useRef, useState } from "react";
 import { Art } from "@/components/art";
 import { decodeImage, defaultCrop, drawCover, prepareCover, uploadArtwork } from "@/lib/upload";
 
-export function CoverInput({ value, onChange, onBusy, disabled }: {
-  value: string | null; onChange: (value: string | null) => void; onBusy: (busy: boolean) => void; disabled: boolean;
+export function CoverInput({ value, onChange, onBusy, disabled, label = "Cover image" }: {
+  value: string | null; onChange: (value: string | null) => void; onBusy: (busy: boolean) => void; disabled: boolean; label?: string;
 }) {
   const [image, setImage] = useState<ImageBitmap>();
   const [name, setName] = useState("");
@@ -42,7 +42,7 @@ export function CoverInput({ value, onChange, onBusy, disabled }: {
   }
 
   return <div className="cover-field">
-    <span className="form-label">Cover image <small>Optional · 2:3</small></span>
+    <span className="form-label">{label} <small>Optional · 2:3</small></span>
     <div className="cover-field-content">
       <Art id={value} preview alt={value ? "Current cover" : "Cover placeholder"} />
       <div>

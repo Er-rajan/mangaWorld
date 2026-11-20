@@ -28,6 +28,6 @@ export const adminAction = z.discriminatedUnion("action", [
     author: z.string().trim().max(100), about: z.string().max(6000),
     watermark: z.boolean(), comments: z.boolean(),
     characters: z.array(z.object({ name: z.string().trim().min(1, "Give each character a name.").max(100),
-      series: z.string().max(120), bio: z.string().max(1600) })).max(30),
+      series: z.string().max(120), bio: z.string().max(1600), image_id: cover_id.optional() })).max(30),
   }) }),
 ]);

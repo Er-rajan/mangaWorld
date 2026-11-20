@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { SeriesDetail } from "@/components/series-detail";
-import { library } from "@/lib/db";
+import { library, nextChapterRelease } from "@/lib/db";
 import { artUrl, seriesLink } from "@/lib/format";
 import { siteName } from "@/lib/brand";
 
@@ -21,9 +21,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function SeriesPage({ params }: Props) {
   const { slug } = await params;
-  const { series, unavailable } = await library();
+  const { series, settings, unavailable } = await library();
   const entry = series.find((series) => series.slug === slug);
   if (!entry && unavailable) throw new Error("The series is temporarily unavailable.");
   if (!entry) notFound();
-  return <SeriesDetail series={entry} today={Date.now()} />;
+  const profiles = settings.characters.filter((profile) => {
+    const name = profile.series.trim().toLowerCase();
+    return name === entry.slug || name === entry.title.toLowerCase();
+  });
+  return <SeriesDetail series={entry} profiles={profiles} scheduled={await nextChapterRelease(entry)} today={Date.now()} />;
 }

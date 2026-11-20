@@ -3,7 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import { cache } from "react";
 import { defaultSettings, starterLibrary } from "./starter";
 import { bundledChapter, includeBundledChapters } from "./bundled-chapters";
-import type { Chapter, ChapterSummary, Library, PageArt, Series, Settings } from "./types";
+import type { Chapter, ChapterSummary, Library, PageArt, ScheduledRelease, Series, Settings } from "./types";
 
 const url = process.env.SUPABASE_URL?.trim();
 const publicKey = process.env.SUPABASE_PUBLISHABLE_KEY?.trim();
@@ -89,6 +89,13 @@ export const getChapter = cache(async (slug: string, id: string, admin = false):
     .eq("chapter_id", id).order("position"), "reading chapter pages") as PageArt[];
   return { ...summary, pages };
 });
+
+export async function nextChapterRelease(series: Series): Promise<ScheduledRelease | undefined> {
+  if (!hasDatabase || series.id === series.slug) return undefined;
+  const { data, error } = await database().rpc("next_chapter_release", { series: series.id }).maybeSingle<ScheduledRelease>();
+  if (error && error.code !== "PGRST202") console.error("Could not load scheduled chapter release:", error);
+  return data ?? undefined;
+}
 
 export async function backup() {
   return ensure(await database(true).rpc("export_library"), "exporting the library");

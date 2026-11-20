@@ -12,6 +12,7 @@ const rpc = {
   allow_admin_login: ["attempt_key"], save_series: ["payload", "target", "expected"],
   save_chapter: ["payload", "target", "expected"], track_chapter: ["target", "browser_id", "action", "reaction"],
   export_library: [], claim_unused_art: [], delete_entry: ["kind", "target", "expected"],
+  next_chapter_release: ["series"],
 };
 
 async function seedReader() {
@@ -110,7 +111,7 @@ const server = createServer(async (req, res) => {
       const body = JSON.parse((await read(req)).toString());
       const placeholders = rpc[name].map((_, i) => "$" + (i + 1)).join(",");
       const args = rpc[name].map((key) => body[key]);
-      const set = name === "track_chapter" || name === "claim_unused_art";
+      const set = ["track_chapter", "claim_unused_art", "next_chapter_release"].includes(name);
       const rows = (await query(`select ${set ? "* from " : ""}public.${name}(${placeholders})${set ? "" : " as value"}`, args)).rows;
       return respond(res, 200, set ? (name === "claim_unused_art" ? rows.map((row) => row[name]) : rows) : rows[0].value);
     }

@@ -160,7 +160,7 @@ export function SettingsForm({ settings, commentsConfigured }: { settings: Setti
       try {
         await adminRequest({ action: "settings", payload: { author: fields.get("author"), about: fields.get("about"),
           watermark: fields.has("watermark"), comments: fields.has("comments"),
-          characters: characters.map(({ name, series, bio }) => ({ name, series, bio })) } });
+          characters: characters.map(({ name, series, bio, image_id }) => ({ name, series, bio, image_id })) } });
         setMessage("Settings saved.");
       } catch (error) { setMessage((error as Error).message); }
       finally { setBusy(false); }
@@ -182,6 +182,8 @@ export function SettingsForm({ settings, commentsConfigured }: { settings: Setti
           <label>Bio<textarea rows={2} maxLength={1600} value={profile.bio} onChange={(event) => {
             setCharacters((items) => items.map((item, i) => i === index ? { ...item, bio: event.target.value } : item));
           }} /></label>
+          <CoverInput label="Character portrait" value={profile.image_id ?? null} onBusy={setBusy} disabled={busy}
+            onChange={(image_id) => setCharacters((items) => items.map((item) => item.key === profile.key ? { ...item, image_id } : item))} />
           <button type="button" className="button text-danger" disabled={busy} onClick={() => setCharacters((items) =>
             items.filter((item) => item.key !== profile.key))}><Trash2 size={16} /> Remove profile</button>
         </div>)}
