@@ -5,17 +5,19 @@ export const rajanBackdrop = `/manga/${rajanSlug}/backdrop.webp`;
 
 type Pages = { width: number; height: number; descriptions: string[] };
 
-function createChapter(number: number, title: string, releaseAt: string, groups: Pages[]): Chapter {
+function createChapter(number: number, title: string, releaseAt: string, groups: Pages[],
+  { omittedPages = [], revision = 1 }: { omittedPages?: number[]; revision?: number } = {}): Chapter {
   const id = `chapter-${number}`;
   const folder = `/manga/${rajanSlug}/${id}`;
   const pages = groups.flatMap(({ width, height, descriptions }) => descriptions.map((alt) => ({ width, height, alt })))
     .map((page, index) => {
       const filename = `page-${String(index + 1).padStart(2, "0")}.webp`;
       return { ...page, asset_id: `${folder}/${filename}`, filename };
-    });
+    })
+    .filter((_, index) => !omittedPages.includes(index + 1));
   return {
     id, series_id: rajanSlug, number, title, note: "", release_at: releaseAt, published: true, cover_id: null,
-    revision: 1, likes: 0, views: 0, first_page: pages[0].asset_id, thumbnail_id: `${folder}/thumbnail.webp`, pages,
+    revision, likes: 0, views: 0, first_page: pages[0].asset_id, thumbnail_id: `${folder}/thumbnail.webp`, pages,
   };
 }
 
@@ -89,5 +91,5 @@ export const rajanChapters = [
       "Rajan fights his way through a shower of glowing spears.",
       "Rajan’s lightning strike shatters Dandveer’s armor, and both fighters prepare to clash again.",
     ],
-  }]),
+  }], { omittedPages: [5, 6], revision: 2 }),
 ];
