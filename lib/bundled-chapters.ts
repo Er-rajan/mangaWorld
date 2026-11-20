@@ -18,8 +18,15 @@ export function includeBundledChapters(series: Series): Series {
   const existing = new Set(series.chapters.map((chapter) => chapter.number));
   const included = bundled.filter((chapter) => !existing.has(chapter.number)).map(({ pages: _pages, ...chapter }) =>
     ({ ...chapter, series_id: series.id }));
+  const details = series.slug === rajanSlug ? {
+    description: "A missed bus leads Rajan to a forgotten temple and a curse tied to the power of Thor.", tags: ["Fantasy", "Action"],
+  } : {
+    description: "A young courier follows a mysterious train through a city swallowed by water.", tags: ["Mystery", "Fantasy"],
+  };
   return {
     ...series,
+    description: series.description.trim() || details.description,
+    tags: series.tags.length ? series.tags : details.tags,
     hero: series.hero ?? (series.slug === rajanSlug ? rajanBackdrop : undefined),
     cover_id: series.cover_id ?? bundled[0].cover_id,
     chapters: [...series.chapters, ...included].sort((a, b) => a.number - b.number),

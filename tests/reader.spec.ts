@@ -150,7 +150,9 @@ test("invalid Supabase credentials leave the bundled catalogue and reader availa
   const invalidKeySite = "http://127.0.0.1:3213";
   const home = await page.goto(invalidKeySite);
   expect(home?.status()).toBe(200);
-  await expect(page.getByText("The full manga library is temporarily unavailable.")).toBeVisible();
+  await expect(page.getByText("The library is having trouble loading.", { exact: false })).toBeVisible();
+  await page.getByRole("button", { name: "Dismiss library notice" }).click();
+  await expect(page.getByText("The library is having trouble loading.", { exact: false })).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "Rajan: The Thor Curse", level: 1 })).toBeVisible();
   const chapter = await page.goto(invalidKeySite + "/read/the-drowned-city/chapter-1");
   expect(chapter?.status()).toBe(200);

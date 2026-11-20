@@ -46,7 +46,7 @@ export function SeriesDetail({ series, today }: { series: Series; today: number 
         </button>}
       </div>
       {chapters.length ? <div className="latest-list">
-        {chapters.map((chapter) => <ChapterRow key={chapter.id} series={series} chapter={chapter} recent={isNew(chapter.release_at, today)} />)}
+        {chapters.map((chapter) => <ChapterRow key={chapter.id} series={series} chapter={chapter} today={today} recent={isNew(chapter.release_at, today)} />)}
         {upcoming !== undefined && <div className="chapter-row upcoming-row">
           <span className="upcoming-thumbnail"><Clock3 size={21} aria-hidden="true" /></span>
           <div className="chapter-row-text"><h3>Chapter {upcoming}</h3></div>

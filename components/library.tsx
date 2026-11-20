@@ -1,13 +1,13 @@
 "use client";
 
-import { BookOpen, ChevronRight, History, Layers3, LibraryBig } from "lucide-react";
+import { BookOpen, ChevronRight, History, Instagram, Layers3, LibraryBig } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { Art } from "./art";
-import { artUrl, chapterArt, chapterLink, isNew, numberLabel, seriesLink, shortDate } from "@/lib/format";
+import { artUrl, chapterArt, chapterLink, fullDate, isNew, latestReleasedChapter, numberLabel, releaseAge, seriesLink } from "@/lib/format";
 import { useLocal } from "@/lib/local";
 import type { ChapterSummary, Series } from "@/lib/types";
-import { authorName, siteBanner, siteName } from "@/lib/brand";
+import { authorName, instagramHandle, instagramUrl, siteBanner, siteName } from "@/lib/brand";
 
 const coverAccents = new Map<string, Promise<string | null>>();
 
@@ -113,6 +113,7 @@ export function SeriesStatus({ series }: { series: Series }) {
 
 export function SeriesCard({ series }: { series: Series }) {
   const count = series.chapters.length;
+  const latest = latestReleasedChapter(series.chapters);
   const artwork = poster(series);
   return <Link href={seriesLink(series)} className="series-card" data-cover-accent>
     <div className={`card-art${artwork ? "" : " card-without-cover"}`}>
@@ -120,21 +121,27 @@ export function SeriesCard({ series }: { series: Series }) {
         onLoad={(event) => applyCoverAccent(event.currentTarget)} />
         : <BookOpen className="card-illustration" size={98} strokeWidth={.85} aria-hidden="true" />}
       <SeriesStatus series={series} />
-      <div className="card-title"><h3>{series.title}</h3>{series.tags.length > 0 && <p>{series.tags.slice(0, 3).join(" · ")}</p>}</div>
+      <div className="card-title"><h3>{series.title}</h3></div>
     </div>
-    <div className="card-meta"><BookOpen size={15} /> {count ? `${count} ${count === 1 ? "chapter" : "chapters"}` : "Series details"}<ChevronRight size={16} /></div>
+    <div className="card-summary">
+      {series.tags.length > 0 && <p className="card-genres">{series.tags.slice(0, 3).join(" · ")}</p>}
+      {series.description && <p className="card-synopsis" title={series.description}>{series.description}</p>}
+      <div className="card-meta"><BookOpen size={15} /> {count ? `${count} ${count === 1 ? "chapter" : "chapters"}` : "Series details"}<ChevronRight size={16} /></div>
+      {latest && <p className="card-latest" title={latest.title}>Latest · Chapter {numberLabel(latest.number)} · {latest.title}</p>}
+    </div>
   </Link>;
 }
 
-export function ChapterRow({ series, chapter, libraryRow = false, recent = false }: {
-  series: Series; chapter: ChapterSummary; libraryRow?: boolean; recent?: boolean;
+export function ChapterRow({ series, chapter, today, libraryRow = false, recent = false }: {
+  series: Series; chapter: ChapterSummary; today: number; libraryRow?: boolean; recent?: boolean;
 }) {
   return <Link prefetch={false} className="chapter-row" href={chapterLink(series, chapter)}>
     <Art id={chapter.thumbnail_id ?? chapterArt(series, chapter)} />
     <div className="chapter-row-text">
       <div className="chapter-kicker">{libraryRow ? series.title : `Chapter ${numberLabel(chapter.number)}`}</div>
       <h3>{chapter.title}</h3>
-      <p>{libraryRow ? `Chapter ${numberLabel(chapter.number)} · ` : ""}{shortDate(chapter.release_at)}</p>
+      <p>{libraryRow ? `Chapter ${numberLabel(chapter.number)} · ` : ""}
+        <time dateTime={chapter.release_at} title={fullDate(chapter.release_at)}>{releaseAge(chapter.release_at, today)}</time></p>
     </div>
     {recent && <span className="new-badge">New</span>}
     <ChevronRight className="row-chevron" size={16} />
@@ -143,12 +150,14 @@ export function ChapterRow({ series, chapter, libraryRow = false, recent = false
 
 export function ContinueReading({ series }: { series: Series[] }) {
   const progress = useLocal("progress");
-  const readable = new Set(series.flatMap((item) => item.chapters.map((chapter) => chapterLink(item, chapter))));
-  const entry = Object.values(progress).filter((item) => readable.has(item.path)).sort((a, b) => b.updated - a.updated)[0];
+  const readable = new Map(series.flatMap((item) => item.chapters.map((chapter) => [chapterLink(item, chapter), { item, chapter }] as const)));
+  const entry = Object.values(progress).filter((item) => readable.has(item.path) && Number.isInteger(item.page)
+    && item.page > 0 && item.page <= item.total).sort((a, b) => b.updated - a.updated)[0];
   if (!entry) return null;
+  const { item, chapter } = readable.get(entry.path)!;
   return <a className="resume-strip" href={`${entry.path}?page=${entry.page}`}>
     <span className="section-icon"><History size={21} /></span>
-    <span><strong>Continue reading</strong><small>{entry.series} · {entry.chapter} · Page {entry.page} of {entry.total}</small></span>
+    <span><strong>Continue reading</strong><small>{item.title} · {chapter.title} · Page {entry.page} of {entry.total}</small></span>
     <ChevronRight size={19} />
   </a>;
 }
@@ -176,18 +185,23 @@ export function BrowseLibrary({ series, today }: { series: Series[]; today: numb
         {selected.map((entry) => <SeriesCard key={entry.id} series={entry} />)}
       </div> : <p className="empty-box">The first series is on its way.</p>}
     </section>
-    <aside aria-labelledby="latest-title">
+    <aside className="library-sidebar" aria-labelledby="latest-title">
       <div className="section-heading"><span className="section-icon"><Layers3 size={21} /></span>
         <h2 id="latest-title">Latest chapters</h2>
         <CarouselButtons carousel={chapterCarousel} controls="chapter-carousel" label="chapters" />
       </div>
       {latest.length ? <div className="latest-list chapter-carousel carousel-track" id="chapter-carousel" ref={chapterCarousel.track}>
         {latest.map(({ series: entry, chapter }) => <ChapterRow key={`${entry.id}/${chapter.id}`} series={entry}
-          chapter={chapter} libraryRow recent={isNew(chapter.release_at, today)} />)}
+          chapter={chapter} today={today} libraryRow recent={isNew(chapter.release_at, today)} />)}
       </div> : <div className="release-empty">
         <BookOpen size={25} aria-hidden="true" />
         <p>New chapters will appear here.</p>
       </div>}
+      <div className="author-card">
+        <Instagram size={22} aria-hidden="true" />
+        <div><h3>Follow {authorName}</h3><p>Artwork and news from the author.</p></div>
+        <a href={instagramUrl} target="_blank" rel="noreferrer" className="button secondary">{instagramHandle}</a>
+      </div>
     </aside>
   </div>;
 }

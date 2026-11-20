@@ -3,6 +3,7 @@ import { Instagram } from "lucide-react";
 import { library } from "@/lib/db";
 import { Brand } from "@/components/brand";
 import { SiteHeader } from "@/components/site-header";
+import { CatalogueNotice } from "@/components/catalogue-notice";
 import { chapterLink, seriesLink } from "@/lib/format";
 import { authorName, instagramHandle, instagramUrl } from "@/lib/brand";
 
@@ -15,7 +16,7 @@ export default async function LibraryLayout({ children }: { children: React.Reac
   ]);
   return <>
     <SiteHeader search={search} />
-    {unavailable && <p className="catalogue-notice" role="status">The full manga library is temporarily unavailable.</p>}
+    {unavailable && <CatalogueNotice />}
     {children}
     <footer className="site-footer">
       <div className="site-width footer-inner">

@@ -20,11 +20,12 @@ type LocalValues = {
   prefs: ReaderPrefs;
   seriesLayouts: Record<string, ReaderLayout>;
   tapGuideSeen: boolean;
+  catalogueNoticeDismissed: boolean;
   visitor: string;
   likes: string[];
 };
 const defaults: LocalValues = { theme: defaultTheme, follows: [], progress: {}, bookmarks: [], prefs: defaultReader,
-  seriesLayouts: {}, tapGuideSeen: false, visitor: "", likes: [] };
+  seriesLayouts: {}, tapGuideSeen: false, catalogueNoticeDismissed: false, visitor: "", likes: [] };
 const data = new Map<string, { raw: string | null; value: unknown }>();
 const prefix = "nightfolio:";
 const changed = "nightfolio-local";
