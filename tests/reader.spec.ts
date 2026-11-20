@@ -285,3 +285,17 @@ test("covered chapters advance into the reader and controls return on pointer mo
   await page.mouse.move(200, 250);
   await expect(page.locator(".reader-toolbar")).toHaveCSS("opacity", "1");
 });
+
+test("continue reading restores a vertical position within the saved page", async ({ page }) => {
+  await page.goto(site + path + "?page=2");
+  await expect(page.getByRole("slider", { name: "Page", exact: true })).toHaveValue("2");
+  await page.evaluate(() => window.scrollBy(0, 124));
+  const position = await page.evaluate(() => window.scrollY);
+  await expect.poll(() => page.evaluate((key) => {
+    const progress = JSON.parse(localStorage.getItem("nightfolio:progress") ?? "{}");
+    return progress[key]?.offset;
+  }, path)).toBeGreaterThan(0.1);
+  await page.goto(site);
+  await page.getByRole("link", { name: /Continue reading/ }).click();
+  await expect.poll(() => page.evaluate((saved) => Math.abs(scrollY - saved), position)).toBeLessThan(3);
+});

@@ -38,6 +38,11 @@ export function ReaderSocial({ id, path, title, comments, initial, reactionsAvai
   const active = stats.liked ?? liked;
 
   async function toggleLike() {
+    if (!reactionsAvailable) {
+      const saved = getLocal("likes").filter((entry) => entry !== path);
+      setLocal("likes", active ? saved : [...saved, path]);
+      return;
+    }
     setBusy(true);
     setMessage("");
     try {
@@ -56,13 +61,12 @@ export function ReaderSocial({ id, path, title, comments, initial, reactionsAvai
 
   const shareLink = encodeURIComponent(shareUrl);
   return <>
-    <div className="reader-social" aria-label={reactionsAvailable ? "Chapter reactions and sharing" : "Chapter sharing"}>
-      {reactionsAvailable && <>
-        <span><Eye size={18} /> {stats.views} {stats.views === 1 ? "view" : "views"}</span>
-        <button className="button secondary reaction-button" aria-pressed={active} disabled={busy} onClick={toggleLike}>
-          <Heart size={18} fill={active ? "currentColor" : "none"} /> {stats.likes} {stats.likes === 1 ? "like" : "likes"}
-        </button>
-      </>}
+    <div className="reader-social" aria-label="Chapter reactions and sharing">
+      {reactionsAvailable && <span><Eye size={18} /> {stats.views} {stats.views === 1 ? "view" : "views"}</span>}
+      <button className="button secondary reaction-button" aria-pressed={active} disabled={busy} onClick={toggleLike}>
+        <Heart size={18} fill={active ? "currentColor" : "none"} />
+        {reactionsAvailable ? `${stats.likes} ${stats.likes === 1 ? "like" : "likes"}` : "Like chapter"}
+      </button>
       <button className="button secondary" onClick={() => {
         setShareUrl(new URL(path, window.location.origin).href);
         setMessage("");

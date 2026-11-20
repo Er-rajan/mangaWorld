@@ -159,7 +159,7 @@ export function ContinueReading({ series }: { series: Series[] }) {
     && item.page > 0 && item.page <= item.total).sort((a, b) => b.updated - a.updated)[0];
   if (!entry) return null;
   const { item, chapter } = readable.get(entry.path)!;
-  return <a className="resume-strip" href={`${entry.path}?page=${entry.page}`}>
+  return <a className="resume-strip" href={`${entry.path}?page=${entry.page}&resume=1`}>
     <Art id={chapter.cover_id ?? chapter.thumbnail_id ?? chapterArt(item, chapter)} className="resume-art" />
     <span><strong>Continue reading</strong><small>{item.title} · {chapter.title}</small>
       <span className="resume-progress"><progress value={entry.page} max={entry.total} aria-label="Reading progress" />

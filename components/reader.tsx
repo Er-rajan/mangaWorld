@@ -1,7 +1,7 @@
 "use client";
 
 import { Bookmark, BookOpen, Check, ChevronLeft, ChevronRight, Clock3, Download, Expand, Maximize, Minimize, PanelTop, Settings2, X } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { artUrl, numberLabel } from "@/lib/format";
 import { getLocal, rememberProgress, setLocal, useLocal, type PageTransition, type ReaderPrefs, type SavedPage } from "@/lib/local";
 import type { Chapter, Direction, PageArt, ReaderLayout, ReaderMode } from "@/lib/types";
@@ -14,7 +14,7 @@ import { PageScrubber, useReaderChrome } from "./reader-chrome";
 type Props = { series: string; seriesUrl: string; path: string; chapter: Chapter; next?: string; prev?: string;
   nextArtwork: string[]; upcoming?: number; reactionsAvailable: boolean; watermark: string; comments?: Comments; defaultLayout?: ReaderLayout };
 
-const backgrounds = { ink: "#0c0b10", gray: "#323039", paper: "#dfd9d2" };
+const backgrounds = { ink: "#0c0b10", gray: "#323039", paper: "#dfd9d2", black: "#000" };
 
 function ChapterNav({ prev, next, seriesUrl, upcoming }: Pick<Props, "prev" | "next" | "seriesUrl" | "upcoming">) {
   return <nav className="chapter-nav" aria-label="Chapter navigation">
@@ -56,6 +56,8 @@ export function Reader({ series, seriesUrl, path, chapter, next, prev, nextArtwo
   const scrollTarget = useRef<number | null>(null);
   const frame = useRef<number | null>(null);
   const touch = useRef<{ x: number; y: number } | null>(null);
+  const lastTap = useRef<{ x: number; y: number; at: number } | null>(null);
+  const zoomAnchor = useRef<{ index: number; offset: number } | null>(null);
   const lastSwipe = useRef(0);
   const toolbar = useRef<HTMLDivElement>(null);
   const previousMode = useRef<ReaderMode>(mode);
@@ -68,31 +70,35 @@ export function Reader({ series, seriesUrl, path, chapter, next, prev, nextArtwo
 
   const clamp = useCallback((n: number) => Math.max(minimum, Math.min(total || minimum, Math.floor(n))), [minimum, total]);
 
-  const scrollToPage = useCallback((index: number) => {
+  const scrollToPage = useCallback((index: number, offset?: number) => {
     const element = figures.current.get(index);
     if (!element) return;
     scrollTarget.current = index;
-    const offset = toolbar.current?.offsetHeight ?? 0;
-    window.scrollTo({ top: window.scrollY + element.getBoundingClientRect().top - offset - 12, behavior: "instant" });
+    const header = toolbar.current?.offsetHeight ?? 0;
+    const bounds = element.getBoundingClientRect();
+    window.scrollTo({ top: window.scrollY + bounds.top - header + (offset === undefined ? -12 : offset * bounds.height), behavior: "instant" });
     requestAnimationFrame(() => { scrollTarget.current = null; });
   }, []);
 
   useEffect(() => {
-    const query = new URLSearchParams(window.location.search).get("page");
-    const stored = getLocal("progress")[path]?.page;
+    const params = new URLSearchParams(window.location.search);
+    const query = params.get("page");
+    const stored = getLocal("progress")[path];
     const hasPageLink = query !== null && /^\d+$/.test(query);
-    const wanted = hasPageLink ? Number(query) : stored ?? minimum;
+    const wanted = hasPageLink ? Number(query) : stored?.page ?? minimum;
     const index = clamp(wanted);
     const savedMode = defaultLayout
       ? (getLocal("seriesLayouts")[seriesUrl] ?? defaultLayout).mode : getLocal("prefs").mode;
     setPage(index);
     setOpening(!hasPageLink && stored === undefined && total > 0
       && !window.matchMedia("(prefers-reduced-motion: reduce)").matches);
-    setReady(true);
-    if (savedMode === "vertical" && index > minimum) {
-      const frame = requestAnimationFrame(() => scrollToPage(index));
+    const offset = (!hasPageLink || params.get("resume") === "1") && stored?.page === index && Number.isFinite(stored.offset)
+      ? stored.offset : undefined;
+    if (savedMode === "vertical" && (index > minimum || hasPageLink || offset !== undefined)) {
+      const frame = requestAnimationFrame(() => { scrollToPage(index, offset); setReady(true); });
       return () => cancelAnimationFrame(frame);
     }
+    setReady(true);
   }, [path, minimum, total, clamp, scrollToPage, defaultLayout, seriesUrl]);
 
   useEffect(() => {
@@ -163,13 +169,36 @@ export function Reader({ series, seriesUrl, path, chapter, next, prev, nextArtwo
     else if (previous === "vertical") window.scrollTo({ top: 0, behavior: "instant" });
   }, [mode, page, ready, scrollToPage]);
 
+  const pageOffset = useCallback((index: number) => {
+    const bounds = figures.current.get(index)?.getBoundingClientRect();
+    return bounds?.height ? ((toolbar.current?.offsetHeight ?? 0) - bounds.top) / bounds.height : undefined;
+  }, []);
   const saved = useCallback((index: number): SavedPage => ({
     path, series, chapter: chapter.title, page: index, total, updated: Date.now(),
   }), [path, series, chapter.title, total]);
 
   useEffect(() => {
-    if (ready && page >= 1 && total) rememberProgress(saved(page));
-  }, [ready, page, total, saved]);
+    if (!ready || page < 1 || !total) return;
+    if (mode !== "vertical") { rememberProgress(saved(page)); return; }
+    let timer: number | undefined;
+    function persist() {
+      window.clearTimeout(timer);
+      const offset = pageOffset(page);
+      if (offset !== undefined) rememberProgress({ ...saved(page), offset });
+    }
+    function queue() {
+      window.clearTimeout(timer);
+      timer = window.setTimeout(persist, 180);
+    }
+    persist();
+    window.addEventListener("scroll", queue, { passive: true });
+    window.addEventListener("pagehide", persist);
+    return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener("scroll", queue);
+      window.removeEventListener("pagehide", persist);
+    };
+  }, [mode, page, pageOffset, ready, total, saved]);
 
   const setIndex = useCallback((index: number) => {
     const next = clamp(index);
@@ -197,6 +226,12 @@ export function Reader({ series, seriesUrl, path, chapter, next, prev, nextArtwo
   const firstVisible = mode === "spread" ? spreadStart : page;
   const lastVisible = mode === "spread" && page > 0 ? Math.min(firstVisible + 1, total) : page;
   const scale = (zoomed ? Math.max(150, prefs.zoom) : prefs.zoom) / 100;
+  useLayoutEffect(() => {
+    const anchor = zoomAnchor.current;
+    if (!anchor) return;
+    zoomAnchor.current = null;
+    scrollToPage(anchor.index, anchor.offset);
+  }, [scale, scrollToPage]);
   const guideVisible = ready && !guideSeen && mode !== "vertical" && page > 0 && total > 0 && !opening && scale <= 1;
   const dismissGuide = useCallback(() => setLocal("tapGuideSeen", true), []);
   const move = useCallback((delta: -1 | 1) => {
@@ -278,6 +313,12 @@ export function Reader({ series, seriesUrl, path, chapter, next, prev, nextArtwo
     setLocal("bookmarks", entries.length === remaining.length ? [entry, ...entries].slice(0, 150) : remaining);
   }
 
+  function toggleZoom() {
+    const offset = mode === "vertical" ? pageOffset(page) : undefined;
+    if (offset !== undefined) zoomAnchor.current = { index: page, offset };
+    setZoomed(!zoomed);
+  }
+
   function openSettings() {
     const position = window.scrollY;
     dialog.current?.showModal();
@@ -350,22 +391,32 @@ export function Reader({ series, seriesUrl, path, chapter, next, prev, nextArtwo
       <div className={`reader-layout ${mode} ${mode === "spread" && rtl ? "reader-rtl" : ""} ${scale > 1 ? "is-zoomed" : ""}`}
         ref={pageLayout} tabIndex={-1} data-transition={transition}
         style={{ "--reader-scale": scale, "--reader-brightness": prefs.brightness / 100,
+          "--reader-warmth": `sepia(${prefs.warm ? ".32" : "0"})`,
           "--turn-offset": `${turnDirection * 25}px`, "--turn-angle": `${turnDirection * -23}deg`,
           "--turn-edge": turnDirection > 0 ? "left center" : "right center" } as React.CSSProperties}
         onTouchStart={(event) => {
-          if (mode === "vertical" || scale > 1 || event.touches.length !== 1) return;
+          if (event.touches.length !== 1) { touch.current = null; return; }
           touch.current = { x: event.touches[0].clientX, y: event.touches[0].clientY };
         }} onTouchEnd={(event) => {
           const start = touch.current;
           const end = event.changedTouches[0];
           touch.current = null;
-          if (mode === "vertical" || !start || !end) return;
+          if (!start || !end) return;
           const delta = end.clientX - start.x;
-          if (Math.abs(delta) > 45 && Math.abs(end.clientY - start.y) < Math.abs(delta) * .65) {
+          const height = Math.abs(end.clientY - start.y);
+          if (mode !== "vertical" && scale <= 1 && Math.abs(delta) > 45 && height < Math.abs(delta) * .65) {
             lastSwipe.current = Date.now();
             move((delta > 0) === rtl ? 1 : -1);
+          } else if (Math.abs(delta) < 12 && height < 12 && (event.target as Element).closest(".manga-page")
+            && !(event.target as Element).closest("button")) {
+            const previous = lastTap.current;
+            const position = { x: end.clientX, y: end.clientY, at: Date.now() };
+            if (previous && position.at - previous.at < 320 && Math.hypot(position.x - previous.x, position.y - previous.y) < 42) {
+              lastTap.current = null;
+              toggleZoom();
+            } else lastTap.current = position;
           }
-        }}>
+        }} onTouchCancel={() => { touch.current = null; }}>
         {(mode === "vertical" || page === 0) && titleCard}
         {visible}
         {!total && <div className="empty-box reader-empty"><BookOpen aria-hidden="true" /><h2>No pages yet</h2>
@@ -394,7 +445,7 @@ export function Reader({ series, seriesUrl, path, chapter, next, prev, nextArtwo
       </aside>}
       {mode !== "vertical" && total > 0 && <div className="page-nav">
         <button className="button secondary" disabled={firstVisible <= minimum} onClick={() => move(-1)}><ChevronLeft size={18} /> Previous page</button>
-        <button className="button secondary" onClick={() => setZoomed(!zoomed)} aria-pressed={zoomed} aria-label="Quick zoom"><Expand size={17} /></button>
+        <button className="button secondary" onClick={toggleZoom} aria-pressed={zoomed} aria-label="Quick zoom"><Expand size={17} /></button>
         <button className="button primary" disabled={lastVisible >= total} onClick={() => move(1)}>Next page <ChevronRight size={18} /></button>
       </div>}
     </div>
@@ -403,7 +454,7 @@ export function Reader({ series, seriesUrl, path, chapter, next, prev, nextArtwo
       {chapter.note && <aside className="author-note"><h2>Author’s note</h2><p>{chapter.note}</p></aside>}
       {atEnd ? <div className="chapter-complete">
         <span className="section-icon"><Check size={21} aria-hidden="true" /></span>
-        <div><h2>End of chapter</h2><p>{chapter.title}</p></div>
+        <div><h2>End of chapter</h2><p>Thanks for reading {chapter.title}.</p></div>
         {nav}
       </div> : nav}
       <ReaderSocial id={chapter.id} path={path} title={`${series} · ${chapter.title}`} comments={comments} reactionsAvailable={reactionsAvailable}
@@ -433,8 +484,10 @@ export function Reader({ series, seriesUrl, path, chapter, next, prev, nextArtwo
         <label>Zoom <span>{prefs.zoom}%</span><input type="range" min="75" max="225" step="5" value={prefs.zoom}
           onChange={(event) => { setZoomed(false); changePrefs({ zoom: Number(event.target.value) }); }} /></label>
         <label>Background<select value={prefs.background} onChange={(event) => changePrefs({ background: event.target.value as ReaderPrefs["background"] })}>
-          <option value="ink">Ink black</option><option value="gray">Slate gray</option><option value="paper">Warm paper</option>
+          <option value="ink">Ink black</option><option value="black">Pure black</option><option value="gray">Slate gray</option><option value="paper">Warm paper</option>
         </select></label>
+        <label className="checkbox-label"><input type="checkbox" checked={prefs.warm ?? false}
+          onChange={(event) => changePrefs({ warm: event.target.checked })} /> Warm artwork filter</label>
         <label>Jump to page<select key={page} defaultValue="" disabled={!total} onChange={(event) => {
           const next = Number(event.target.value);
           dialog.current?.close();

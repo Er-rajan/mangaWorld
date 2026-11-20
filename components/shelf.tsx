@@ -15,7 +15,7 @@ export function Shelf({ series }: { series: Series[] }) {
   const history = Object.values(progress).filter((entry) => readable.has(entry.path)).sort((a, b) => b.updated - a.updated);
   function saved(entry: SavedPage, canDelete: boolean) {
     return <li key={`${entry.path}/${entry.page}`} className="saved-row">
-      <a href={`${entry.path}?page=${entry.page}`}><strong>{entry.chapter}</strong><small>{entry.series} · Page {entry.page} of {entry.total}</small></a>
+      <a href={`${entry.path}?page=${entry.page}${canDelete ? "" : "&resume=1"}`}><strong>{entry.chapter}</strong><small>{entry.series} · Page {entry.page} of {entry.total}</small></a>
       {canDelete && <button className="icon-button" aria-label={`Remove bookmark for ${entry.chapter}, page ${entry.page}`}
         onClick={() => setLocal("bookmarks", getLocal("bookmarks").filter((item) => item.path !== entry.path || item.page !== entry.page))}><Trash2 size={17} /></button>}
     </li>;

@@ -5,11 +5,11 @@ import type { ReaderLayout } from "./types";
 import { defaultTheme, resolveTheme, themeStorageKey, type Theme } from "./themes";
 
 export type SavedPage = {
-  path: string; series: string; chapter: string; page: number; total: number; updated: number;
+  path: string; series: string; chapter: string; page: number; total: number; updated: number; offset?: number;
 };
 export type PageTransition = "fade" | "slide" | "page-flip";
-export type ReaderPrefs = ReaderLayout & { zoom: number; brightness: number; background: "ink" | "paper" | "gray";
-  transition?: PageTransition };
+export type ReaderPrefs = ReaderLayout & { zoom: number; brightness: number; background: "ink" | "paper" | "gray" | "black";
+  transition?: PageTransition; warm?: boolean };
 export const defaultReader: ReaderPrefs = { mode: "vertical", direction: "rtl", zoom: 100, brightness: 100, background: "ink", transition: "fade" };
 
 type LocalValues = {
