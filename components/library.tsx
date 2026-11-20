@@ -7,6 +7,8 @@ import { artUrl, chapterLink, chapterThumbnail, fullDate, isNew, latestReleasedC
 import { useLocal } from "@/lib/local";
 import type { ChapterSummary, Series } from "@/lib/types";
 import { authorName, instagramHandle, instagramUrl, siteBanner, siteName } from "@/lib/brand";
+import { ResponsiveArt } from "./responsive-art";
+import { cardSizes, heroSizes } from "@/lib/artwork";
 
 const coverAccents = new Map<string, Promise<string | null>>();
 
@@ -38,7 +40,7 @@ async function findCoverAccent(image: HTMLImageElement) {
     const sample = new Image();
     sample.crossOrigin = "anonymous";
     sample.fetchPriority = "low";
-    sample.src = image.currentSrc;
+    sample.src = image.dataset.accentSrc ?? image.currentSrc;
     try { await sample.decode(); return sampleCover(sample); }
     catch { return null; }
   }
@@ -62,9 +64,7 @@ function applyCoverAccent(image: HTMLImageElement | null) {
 }
 
 function poster(series: Series) {
-  if (series.cover_id) return artUrl(series.cover_id);
-  const thumbnail = series.chapters[0]?.thumbnail_id;
-  return series.hero ?? (thumbnail ? artUrl(thumbnail) : undefined);
+  return series.cover_id ?? series.chapters[0]?.first_page ?? series.hero_id ?? series.hero;
 }
 
 function useCarousel(count: number, filter = "") {
@@ -115,11 +115,11 @@ export function SeriesCard({ series }: { series: Series }) {
   const latest = latestReleasedChapter(series.chapters);
   const artwork = poster(series);
   const first = series.chapters[0];
-  return <article className="series-card-frame">
-    <Link href={seriesLink(series)} className="series-card" data-cover-accent>
+  return <article className="series-card-frame" data-cover-accent>
+    <Link href={seriesLink(series)} className="series-card" prefetch={false}>
     <div className={`card-art${artwork ? "" : " card-without-cover"}`}>
-      {artwork ? <img src={artwork} alt="" loading="lazy" decoding="async" ref={applyCoverAccent}
-        onLoad={(event) => applyCoverAccent(event.currentTarget)} />
+      {artwork ? <ResponsiveArt asset={artwork} artwork={series.cover_id ? series.coverArtwork : artwork === series.hero_id ? series.heroArtwork : undefined}
+        alt="" sizes={cardSizes} onReady={applyCoverAccent} />
         : <BookOpen className="card-illustration" size={98} strokeWidth={.85} aria-hidden="true" />}
       <SeriesStatus series={series} />
       <div className="card-title"><h3>{series.title}</h3></div>
@@ -222,9 +222,9 @@ export function Hero({ featured }: { featured: Series[] }) {
   const series = featured[active];
   const first = series?.chapters[0];
   const latest = series && latestReleasedChapter(series.chapters);
-  const customArtwork = series?.hero ?? (series?.cover_id ? artUrl(series.cover_id, "full") : undefined);
-  const heroStyle = series?.hero ? "hero hero-series-art" : customArtwork ? "hero" : "hero hero-world";
-  const haze = series ? poster(series) : undefined;
+  const banner = series?.hero_id ?? series?.hero;
+  const customArtwork = banner ?? series?.cover_id;
+  const heroStyle = banner ? "hero hero-series-art" : customArtwork ? "hero hero-cover-art" : "hero hero-world";
   useEffect(() => {
     if (!rotating || paused || interacting) return;
     const motion = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -251,9 +251,9 @@ export function Hero({ featured }: { featured: Series[] }) {
     }
   }}>
     <section key={series?.id} className={heroStyle} aria-labelledby="hero-title" data-cover-accent>
-    {haze && <img className="hero-haze" src={haze} alt="" decoding="async" ref={applyCoverAccent}
-      onLoad={(event) => applyCoverAccent(event.currentTarget)} />}
-    <img className={`hero-art${series?.cover_id && !series.hero ? " cover-hero" : ""}`} src={customArtwork ?? siteBanner} alt="" fetchPriority="high" />
+    <ResponsiveArt asset={customArtwork ?? siteBanner} artwork={banner ? series?.heroArtwork : series?.coverArtwork}
+      className="hero-art" alt="" sizes={heroSizes} priority={active === 0} eager purpose="hero"
+      onReady={series ? applyCoverAccent : undefined} />
     <div className="hero-content">
       <div className="hero-eyebrow"><span className="hero-dot" />{series ? "Featured manga" : "Independent manga library"}</div>
       <h1 id="hero-title">{series?.title ?? siteName}</h1>
@@ -263,7 +263,7 @@ export function Hero({ featured }: { featured: Series[] }) {
       {series && <div className="hero-actions">
         {first && <a href={chapterLink(series, first)} className="button primary"><BookOpen size={18} /> Start reading</a>}
         {latest && <a href={chapterLink(series, latest)} className="button hero-secondary">Read latest chapter</a>}
-        <Link href={seriesLink(series)} className={`button ${first ? "hero-secondary" : "primary"}`}>Series details <ChevronRight size={17} /></Link>
+        <Link href={seriesLink(series)} prefetch={false} className={`button ${first ? "hero-secondary" : "primary"}`}>Series details <ChevronRight size={17} /></Link>
       </div>}
     </div>
     {series?.tags.length ? <div className="hero-tags">{series.tags.slice(0, 3).map((tag) => <span key={tag}>{tag}</span>)}</div> : null}

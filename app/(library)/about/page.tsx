@@ -3,6 +3,8 @@ import Link from "next/link";
 import { BookOpen, Instagram, PenLine, Users } from "lucide-react";
 import { library } from "@/lib/db";
 import { authorName, instagramHandle, instagramUrl, siteBanner, siteName } from "@/lib/brand";
+import { ResponsiveArt } from "@/components/responsive-art";
+import { heroSizes } from "@/lib/artwork";
 
 export const metadata: Metadata = { title: `About ${authorName}`, alternates: { canonical: "/about" } };
 export const dynamic = "force-dynamic";
@@ -12,7 +14,7 @@ export default async function AboutPage() {
   const author = settings.author || authorName;
   return <main id="main" className="site-width detail-page">
     <article className="about-card">
-      <img className="about-banner" src={siteBanner} alt="" />
+      <ResponsiveArt className="about-banner" asset={siteBanner} alt="" sizes={heroSizes} eager purpose="hero" />
       <div>
         <span className="section-icon"><PenLine size={20} /></span>
         <h1>{author}</h1>

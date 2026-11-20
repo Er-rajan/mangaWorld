@@ -2,7 +2,8 @@
 
 import { ArrowDownWideNarrow, Bell, BookOpen, Check, Clock3 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Art } from "./art";
+import { ResponsiveArt } from "./responsive-art";
+import { heroSizes } from "@/lib/artwork";
 import { ChapterRow, ContinueReading, SeriesStatus } from "./library";
 import { CharacterProfiles } from "./character-profiles";
 import { chapterLink, fullDate, isNew } from "@/lib/format";
@@ -36,12 +37,14 @@ export function SeriesDetail({ series, today, profiles, scheduled }: {
   const latest = byDate.at(-1);
   const chapters = newest ? byDate.reverse() : byDate;
   const upcoming = upcomingDrownedCityChapter(series);
-  const cover = series.cover_id ?? series.chapters[0]?.thumbnail_id;
-  const showCover = !series.hero || Boolean(cover);
+  const cover = series.cover_id ?? series.chapters[0]?.first_page;
+  const banner = series.hero_id ?? series.hero;
+  const showCover = !banner || Boolean(cover);
   return <main id="main" className="site-width detail-page">
-    <section className={`detail-hero${series.slug === drownedCitySlug ? " drowned-city-hero" : ""}${series.hero ? " detail-hero-with-art" : ""}${showCover ? "" : " detail-hero-no-cover"}`}>
-      {series.hero && <img className="detail-backdrop" src={series.hero} alt="" fetchPriority="high" />}
-      {showCover && <Art id={cover} alt={cover ? `${series.title} cover` : ""} eager full className="detail-cover" />}
+    <section className={`detail-hero${series.slug === drownedCitySlug ? " drowned-city-hero" : ""}${banner ? " detail-hero-with-art" : ""}${showCover ? "" : " detail-hero-no-cover"}`}>
+      {banner && <ResponsiveArt asset={banner} artwork={series.heroArtwork} alt="" sizes={heroSizes} className="detail-backdrop" priority purpose="hero" />}
+      {showCover && <ResponsiveArt asset={cover ?? "/placeholder.webp"} artwork={series.coverArtwork} alt={cover ? `${series.title} cover` : ""}
+        sizes="(max-width: 580px) 144px, 245px" eager className="detail-cover" />}
       <div className="detail-copy">
         <div className="detail-status"><SeriesStatus series={series} />
           <span>{chapters.length} {chapters.length === 1 ? "chapter" : "chapters"}</span></div>

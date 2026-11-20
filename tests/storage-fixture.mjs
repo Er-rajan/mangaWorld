@@ -14,6 +14,7 @@ const rpc = {
   export_library: [], claim_unused_art: [], delete_entry: ["kind", "target", "expected"],
   next_chapter_release: ["series"],
   mutate_reels: ["operation", "payload"], react_to_reel: ["target", "browser", "desired"],
+  reserve_cover_art: ["info", "reuse"], claim_unused_artwork: [], finish_artwork_cleanup: ["targets"], artwork_usage: [],
 };
 
 async function seedReader() {
@@ -97,7 +98,7 @@ const server = createServer(async (req, res) => {
         const uploaded = form.get("");
         if (!(uploaded instanceof Blob) || uploaded.type !== "image/webp") return respond(res, 400, { message: "WebP required" });
         files.set(key, Buffer.from(await uploaded.arrayBuffer()));
-        await asRole(db, "service_role", (tx) => tx.query("insert into storage.objects values ('manga-art', $1)", [key]));
+        await asRole(db, "service_role", (tx) => tx.query("insert into storage.objects values ('manga-art', $1, $2)", [key, { size: uploaded.size }]));
         return respond(res, 200, { Key: "manga-art/" + key });
       }
       if (req.method === "GET" && kind === "sign" && files.has(key)) {
@@ -112,7 +113,7 @@ const server = createServer(async (req, res) => {
       const body = JSON.parse((await read(req)).toString());
       const placeholders = rpc[name].map((_, i) => "$" + (i + 1)).join(",");
       const args = rpc[name].map((key) => body[key]);
-      const set = ["track_chapter", "claim_unused_art", "next_chapter_release", "react_to_reel"].includes(name);
+      const set = ["track_chapter", "claim_unused_art", "next_chapter_release", "react_to_reel", "claim_unused_artwork"].includes(name);
       const rows = (await query(`select ${set ? "* from " : ""}public.${name}(${placeholders})${set ? "" : " as value"}`, args)).rows;
       return respond(res, 200, set ? (name === "claim_unused_art" ? rows.map((row) => row[name]) : rows) : rows[0].value);
     }
@@ -121,11 +122,15 @@ const server = createServer(async (req, res) => {
     const chapterId = url.searchParams.get("chapter_id")?.slice(3);
     let rows;
     switch (path.split("/").at(-1)) {
-      case "assets":
+      case "assets": {
+        const idFilter = url.searchParams.get("id");
+        const selected = idFilter?.startsWith("in.(") ? idFilter.slice(4, -1).split(",") : null;
         rows = (await (req.method === "POST"
           ? query("insert into public.assets default values returning id")
-          : query("select id from public.assets where id = $1 and not deleting", [readId]))).rows;
+          : selected ? query("select * from public.assets where id = any($1) and not deleting", [selected])
+            : query("select * from public.assets where id = $1 and not deleting", [readId]))).rows;
         break;
+      }
       case "series": rows = (await query("select * from public.series order by created_at, id")).rows; break;
       case "chapters":
         rows = (await query(`select c.*, coalesce((select json_agg(json_build_object('asset_id',p.asset_id))

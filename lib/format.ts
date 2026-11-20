@@ -1,10 +1,11 @@
 import type { ChapterSummary, Series } from "./types";
+import type { ArtworkVariant } from "./artwork";
 
 export const chapterLink = (series: Series, chapter: ChapterSummary) =>
   `/read/${series.slug}/${chapter.id}`;
 export const seriesLink = (series: Series) => `/series/${series.slug}`;
 
-export function artUrl(id: string | null | undefined, variant: "thumb" | "full" = "thumb", preview = false) {
+export function artUrl(id: string | null | undefined, variant: ArtworkVariant = "thumb", preview = false) {
   if (!id) return "/placeholder.webp";
   if (id.startsWith("/manga/")) return id;
   const path = `${id}/${variant}`;
@@ -21,6 +22,9 @@ export function readerThumbnail(id: string) {
 
 export function chapterThumbnail(series: Series, chapter: ChapterSummary) {
   const asset = chapter.cover_id ?? chapter.thumbnail_id ?? chapter.first_page ?? series.cover_id;
+  if (asset && /^\/manga\/rajan-the-thor-curse\/chapter-[123]\/thumbnail\.webp$/.test(asset)) {
+    return asset.replace(/\.webp$/, "-list.webp");
+  }
   return asset && /^\/manga\/.+\/(?:cover|page-\d+)\.webp$/.test(asset) ? readerThumbnail(asset) : artUrl(asset);
 }
 

@@ -44,6 +44,7 @@ test("admin crops and uploads covers, bulk uploads and reorders images, converts
   const cover = { name: "cover.png", mimeType: "image/png", buffer: source };
   await page.getByLabel("Cover file").setInputFiles(cover);
   await expect(page.getByRole("img", { name: "Cropped cover preview" })).toBeVisible();
+  await expect(page.getByText(/This crop supplies 341 × 512 pixels/)).toBeVisible();
   await page.getByRole("button", { name: "Upload cover" }).click();
   await expect(page.getByRole("button", { name: "Replace cover" })).toBeVisible();
   await page.getByRole("button", { name: "Save series" }).click();

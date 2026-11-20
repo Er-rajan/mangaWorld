@@ -12,7 +12,7 @@ Manga World is Rajan’s personal manga library with a public reader and a singl
 ## Set up Supabase Free
 
 1. In the [Supabase dashboard](https://supabase.com/dashboard), create a project in a **Free** organization. Pick a region near your readers if they are concentrated in one area.
-2. In SQL Editor, run `supabase/migrations/001_nightfolio.sql`, `002_series_extras.sql`, and `003_reels.sql` in order on a new project. Migration `001` creates the catalogue and private `manga-art` bucket. Run `supabase/seed.sql` to add editable entries for the two bundled series. Under Storage, verify the bucket is private and accepts WebP. Its file limit is 8,000,000 bytes per converted object.
+2. In SQL Editor, run `supabase/migrations/001_nightfolio.sql`, `002_series_extras.sql`, `003_reels.sql`, and `004_artwork_variants.sql` in order on a new project. Migration `001` creates the catalogue and private `manga-art` bucket. Run `supabase/seed.sql` to add editable entries for the two bundled series. Under Storage, verify the bucket is private and accepts WebP. Its file limit is 8,000,000 bytes per converted object.
 3. In **Connect** or **Project Settings → API Keys**, copy the project URL, the publishable key and the secret key. Set `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` and `SUPABASE_SECRET_KEY`. The legacy anon and service-role keys also work in the corresponding slots. Keep the secret key server-side.
 4. Set `ADMIN_USERNAME` and a unique `ADMIN_PASSWORD` at least 16 characters long. Generate a session secret with `node -e "console.log(require('node:crypto').randomBytes(48).toString('hex'))"` and set `ADMIN_SESSION_SECRET`. Keep `.env.local` out of Git. Rotating the admin username, password, or session secret invalidates existing sessions.
 
@@ -29,7 +29,7 @@ Manga World is Rajan’s personal manga library with a public reader and a singl
 
 Chapter metadata, images and reactions are available publicly only when the chapter is marked **Published** and its release timestamp is due. Postgres evaluates the timestamp on each new request. The application issues exact-path signed upload URLs after admin authentication and redirects authorized image reads to short-lived signed downloads. Storage receives the image bytes directly in both directions. Postgres saves the page order and chapter metadata in one transaction after checking uploaded files. The browser associates views and likes with a random local identifier. Views are counted once per chapter, browser and UTC day.
 
-The dashboard’s **Export metadata** button downloads settings, series, chapters, page order, storage identifiers, Reels, categories and aggregate counts as JSON. For a complete backup, retain your original artwork and download the `manga-art` objects separately. **Clean up unused artwork** permanently removes batches of up to 50 unreferenced artwork sets uploaded more than three hours ago. Run it after replacing or deleting a large batch once your edits have been saved. An offline copy previously downloaded by a reader can remain on that reader’s device.
+The dashboard’s **Export metadata** button downloads settings, series, chapters, page order, storage identifiers, Reels, categories and aggregate counts as JSON. For a complete backup, retain your original artwork and download the `manga-art` objects separately. **Clean up unused artwork** removes orphaned page files and obsolete cover renditions in batches of 50 after three hours. Preserved cover masters and legacy cover sources remain available. An offline copy previously downloaded by a reader can remain on that reader’s device.
 
 ## Publish a series and chapter
 
@@ -39,7 +39,17 @@ The dashboard’s **Export metadata** button downloads settings, series, chapter
 4. Drop the chapter’s images together or choose one PDF. Wait for the thumbnails. The browser sorts image filenames naturally and converts PDF pages in document order. Drag the thumbnail handles or use the move buttons to set the order. Use the replace and remove controls to fix individual pages and enter alt text where appropriate.
 5. Set **Draft** to keep the chapter private. Choose **Published** and leave the release time blank for immediate release, or enter a future date and time in your device’s time zone to schedule it. Click **Save chapter**. The dashboard lists scheduled times in UTC.
 
-The browser converts artwork to a full-size WebP and a thumbnail before uploading. Each chapter supports up to 250 pages and each source file up to 100 MB. Keep the original images and PDFs. Public previews use the chapter cover, first page, series cover, then a placeholder in that order. The chapters included with the site are served from `public/manga/`. Publishing Chapter 2 of The Drowned City in Supabase replaces its coming-soon entry with a reader link.
+The browser converts manga pages to WebP and keeps source detail up to 2200 px wide and 6000 px tall. Each chapter supports up to 250 pages and each source file up to 100 MB. Keep the original images and PDFs. Public previews use the chapter cover, first page, series cover, then a placeholder in that order. The chapters included with the site are served from `public/manga/`. Publishing Chapter 2 of The Drowned City in Supabase replaces its coming-soon entry with a reader link.
+
+### Cover and hero artwork
+
+Use a portrait cover of at least **1600 × 2400** and a landscape hero of at least **2400 × 1350**. Series, chapter and character editors accept PNG, JPEG and WebP. The browser makes an uncropped WebP master at quality 96, up to 3600 px on the long side. It then creates renditions up to 400 px, 800 px for covers or 1080 px for heroes, and the recommended full dimensions, based on the pixels available in your crop. The tiny blur preview is embedded in the artwork metadata. Keep your untouched source files separately.
+
+The bundled manga has pre-sized WebP cards and list thumbnails. Built-in Next.js image optimization uses quality 92 for the bundled banners. Uploaded art uses the stored renditions directly.
+
+Open **Admin → Re-process images** to find artwork below the recommended size. In the editor, use **Re-process images** to regenerate renditions from the best saved source. **Adjust focal point** lets you change the crop first. Save the form to publish the new renditions. Reprocessing reuses the existing master and uploads new rendition files under a new ID. A legacy full rendition can serve as a source until you upload a sharper file.
+
+Migration `004_artwork_variants.sql` adds metadata, a series hero reference, and rules that preserve existing cover sources. It leaves current files in place. Apply it before deploying the new upload interface. If you roll back the application, leave the additive schema and artwork objects in place. Cover uploads stop when the project’s current object storage plus the prepared upload would exceed 900 MB. The artwork screen shows live project usage. The Supabase dashboard tracks the full organization’s usage. [Supabase storage usage](https://supabase.com/docs/guides/platform/manage-your-usage/storage-size)
 
 ## Publish Reels
 
@@ -55,7 +65,7 @@ Reels uses YouTube’s privacy-enhanced embeds. Supabase stores the clip metadat
 4. Add the Supabase and admin environment variables from `.env.example` for **Production**. If you enable preview deployments that connect to a database, use a separate test database and credentials. 
 5. Deploy. Set `SITE_URL` to the final public HTTPS origin from the project’s **Domains** page and redeploy to apply the canonical URLs. When omitted, the app uses Vercel’s production domain when available. Check the public home, `/sitemap.xml`, and `/admin` and publish a small chapter to confirm uploads in your project.
 
-On an existing project that already applied `001`, apply `002_series_extras.sql` and `003_reels.sql` in that order before deploying. The migrations add public release-date previews, attach existing artwork uploads to character profiles, and create the Reels metadata tables and policies. The existing `manga-art` bucket and production variables are reused. Set `FEATURED_SERIES` to a comma-separated list of existing series slugs if you want several titles in the homepage carousel.
+On an existing project, apply any pending migrations in numeric order through `004_artwork_variants.sql` before deploying. The app uses the existing `manga-art` bucket and production variables. Set `FEATURED_SERIES` to a comma-separated list of existing series slugs if you want several titles in the homepage carousel.
 
 ### Troubleshoot the live catalogue
 

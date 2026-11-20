@@ -9,6 +9,7 @@ import { ThemePicker } from "./theme";
 import { ReaderSocial, type Comments } from "./reader-social";
 import { useOfflineChapter } from "./offline";
 import { ReaderArtwork } from "./reader-artwork";
+import { ResponsiveArt } from "./responsive-art";
 import { PageScrubber, useReaderChrome } from "./reader-chrome";
 
 type Props = { series: string; seriesUrl: string; path: string; chapter: Chapter; next?: string; prev?: string;
@@ -347,7 +348,8 @@ export function Reader({ series, seriesUrl, path, chapter, next, prev, nextArtwo
   const titleCard = cover && <section className={`opening-card${opening && page === 0 ? " opening-active" : ""}`} aria-label="Chapter cover" ref={(element) => {
     if (element) figures.current.set(0, element); else figures.current.delete(0);
   }}>
-    <img src={cover} alt={`${chapter.title} cover`} decoding="async" />
+    <ResponsiveArt asset={chapter.cover_id!} artwork={chapter.coverArtwork} alt={`${chapter.title} cover`}
+      sizes="(max-width: 500px) 100vw, 470px" eager />
     {watermark && <span className="watermark" aria-hidden="true">{watermark}</span>}
     <div><span>Chapter {numberLabel(chapter.number)}</span><h2>{chapter.title}</h2>
       {total > 0 && <button className="button primary" onClick={() => {

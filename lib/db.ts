@@ -4,6 +4,7 @@ import { cache } from "react";
 import { defaultSettings, starterLibrary } from "./starter";
 import { bundledChapter, includeBundledChapters } from "./bundled-chapters";
 import type { Chapter, ChapterSummary, Library, PageArt, ScheduledRelease, Series, Settings } from "./types";
+import type { Artwork } from "./artwork";
 
 const url = process.env.SUPABASE_URL?.trim();
 const publicKey = process.env.SUPABASE_PUBLISHABLE_KEY?.trim();
@@ -63,7 +64,25 @@ async function loadCatalogue(admin: boolean): Promise<Library> {
     return { ...starterLibrary, settings: currentSettings };
   }
   const catalogue = series.map((row) => ({ ...row, chapters: grouped.get(row.id) ?? [] })) as Series[];
-  return { series: admin ? catalogue : catalogue.map(includeBundledChapters), settings: currentSettings, demo: false };
+  if (admin) return { series: catalogue, settings: currentSettings, demo: false };
+  const details = await artworkDetails(catalogue.flatMap((item) => [item.cover_id, item.hero_id]));
+  return { series: catalogue.map((item) => includeBundledChapters({ ...item,
+    coverArtwork: item.cover_id ? details.get(item.cover_id) : undefined,
+    heroArtwork: item.hero_id ? details.get(item.hero_id) : undefined,
+  })), settings: currentSettings, demo: false };
+}
+
+export async function artworkDetails(ids: (string | null | undefined)[], admin = false) {
+  const assets = [...new Set(ids.filter((id): id is string => Boolean(id && !id.startsWith("/"))))];
+  const descriptions = new Map<string, Artwork>();
+  if (!hasDatabase || !assets.length) return descriptions;
+  const client = database(admin);
+  for (let start = 0; start < assets.length; start += 80) {
+    const { data, error } = await client.from("assets").select("id,artwork").in("id", assets.slice(start, start + 80));
+    if (error) break; // The legacy renditions stay usable before the additive migration is applied.
+    for (const row of data ?? []) if (row.artwork) descriptions.set(row.id, row.artwork as Artwork);
+  }
+  return descriptions;
 }
 
 export const library = cache(async (admin = false): Promise<Library> => {
@@ -87,7 +106,8 @@ export const getChapter = cache(async (slug: string, id: string, admin = false):
   if (data.demo) return undefined;
   const pages = ensure(await database(admin).from("chapter_pages").select("asset_id,width,height,filename,alt")
     .eq("chapter_id", id).order("position"), "reading chapter pages") as PageArt[];
-  return { ...summary, pages };
+  const coverArtwork = !admin && summary.cover_id ? (await artworkDetails([summary.cover_id])).get(summary.cover_id) : undefined;
+  return { ...summary, pages, coverArtwork };
 });
 
 export async function nextChapterRelease(series: Series): Promise<ScheduledRelease | undefined> {

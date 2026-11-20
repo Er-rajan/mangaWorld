@@ -1,3 +1,5 @@
+import type { Artwork } from "./artwork";
+
 export type PageArt = {
   asset_id: string;
   width: number;
@@ -17,6 +19,9 @@ export type Series = {
   revision: number;
   created_at: string;
   hero?: string;
+  hero_id?: string | null;
+  coverArtwork?: Artwork;
+  heroArtwork?: Artwork;
   chapters: ChapterSummary[];
 };
 
@@ -36,7 +41,7 @@ export type ChapterSummary = {
   thumbnail_id?: string;
 };
 
-export type Chapter = ChapterSummary & { pages: PageArt[] };
+export type Chapter = ChapterSummary & { pages: PageArt[]; coverArtwork?: Artwork };
 export type Character = { name: string; series: string; bio: string; image_id?: string | null };
 export type ScheduledRelease = { number: number; release_at: string };
 export type Settings = { author: string; about: string; watermark: boolean; comments: boolean; characters: Character[] };

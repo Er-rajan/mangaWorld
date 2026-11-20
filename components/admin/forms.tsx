@@ -45,6 +45,7 @@ export function AdminLogout() {
 
 export function AdminSeriesForm({ series }: { series?: Series }) {
   const [cover, setCover] = useState(series?.cover_id ?? null);
+  const [hero, setHero] = useState(series?.hero_id ?? null);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   return <form className="admin-panel admin-form" onSubmit={async (event) => {
@@ -54,7 +55,7 @@ export function AdminSeriesForm({ series }: { series?: Series }) {
     setMessage("");
     try {
       const { id } = await adminRequest<{ id: string }>({ action: "series", id: series?.id ?? null, revision: series?.revision ?? 0,
-        payload: { title: fields.get("title"), description: fields.get("description"), cover_id: cover,
+        payload: { title: fields.get("title"), description: fields.get("description"), cover_id: cover, hero_id: hero,
           status: fields.get("status"), tags: [...new Set(String(fields.get("tags") ?? "").split(",").map((tag) => tag.trim()).filter(Boolean))] } });
       window.location.assign(`/admin#series-${id}`);
     } catch (error) { setMessage((error as Error).message); setBusy(false); }
@@ -66,6 +67,7 @@ export function AdminSeriesForm({ series }: { series?: Series }) {
       <label>Status<select name="status" defaultValue={series?.status ?? "ongoing"}><option value="ongoing">Ongoing</option><option value="completed">Completed</option></select></label>
     </div>
     <CoverInput value={cover} onChange={setCover} onBusy={setBusy} disabled={busy} />
+    <CoverInput kind="hero" label="Hero banner" value={hero} onChange={setHero} onBusy={setBusy} disabled={busy} />
     <div className="form-actions">
       <button className="button primary" disabled={busy}><Save size={18} /> Save series</button>
       {series && <DeleteEntry kind="series" id={series.id} revision={series.revision} label={series.title} disabled={busy} onBusy={setBusy} onError={setMessage} />}
@@ -201,9 +203,9 @@ export function SettingsForm({ settings, commentsConfigured }: { settings: Setti
     </form>
     <section className="admin-panel admin-form">
       <h2>Storage</h2>
-      <p>Remove unreferenced images uploaded more than three hours ago to reclaim space after edits or failed uploads.</p>
+      <p>Reclaim space from unused page files and cover renditions older than three hours. Saved cover sources are retained.</p>
       <button className="button text-danger" type="button" disabled={busy} onClick={async () => {
-        if (!window.confirm("Permanently remove unused artwork from Storage?")) return;
+        if (!window.confirm("Remove unused artwork renditions from Storage?")) return;
         setBusy(true);
         try {
           const { removed } = await adminRequest<{ removed: number }>({ action: "cleanup" });

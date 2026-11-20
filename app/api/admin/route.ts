@@ -37,28 +37,49 @@ export async function POST(request: Request) {
     jar.delete(sessionCookie);
     return json({ ok: true });
   }
-  if (requestData.action === "upload") {
-    const record = await db.from("assets").insert({}).select("id").single();
-    if (record.error) return json({ error: "Could not reserve an upload." }, 502);
-    const id: string = record.data.id;
+  if (requestData.action === "artwork-info") {
+    const record = await db.from("assets").select("*").eq("id", requestData.id).maybeSingle();
+    if (!record.data) return json({ error: "This artwork is unavailable." }, 404);
+    return json({ artwork: record.data.artwork ?? null });
+  }
+  if (requestData.action === "upload" || requestData.action === "upload-cover") {
+    const cover = requestData.action === "upload-cover" ? requestData : undefined;
+    let id: string;
+    if (cover) {
+      const record = await db.rpc("reserve_cover_art", { info: cover.artwork, reuse: cover.reuse });
+      if (record.error || !record.data) return json({ error: record.error?.code === "22023" ? record.error.message
+        : "Could not reserve the cover. Apply artwork migration 004 in Supabase and try again." }, 502);
+      id = record.data;
+    } else {
+      const record = await db.from("assets").insert({}).select("id").single();
+      if (record.error) return json({ error: "Could not reserve an upload." }, 502);
+      id = record.data.id;
+    }
+    const variants = ["full"];
+    if (!cover || cover.artwork.thumb < cover.artwork.width) variants.push("thumb");
+    if (cover?.artwork.card) variants.push("card");
+    if (cover && !cover.reuse) variants.push("master");
     const bucket = db.storage.from(artBucket);
-    const [full, thumb] = await Promise.all([
-      bucket.createSignedUploadUrl(`${id}/full.webp`),
-      bucket.createSignedUploadUrl(`${id}/thumb.webp`),
-    ]);
-    if (!full.data || !thumb.data) return json({ error: "Could not sign the artwork upload." }, 502);
-    return json({ id, full: full.data.signedUrl, thumb: thumb.data.signedUrl });
+    const signed = await Promise.all(variants.map(async (variant) => {
+      const { data } = await bucket.createSignedUploadUrl(`${id}/${variant}.webp`);
+      return [variant, data?.signedUrl] as const;
+    }));
+    if (signed.some(([, url]) => !url)) return json({ error: "Could not sign the artwork upload." }, 502);
+    return json({ id, ...Object.fromEntries(signed) });
   }
   if (requestData.action === "cleanup") {
-    const claimed = await db.rpc("claim_unused_art");
+    const claimed = await db.rpc("claim_unused_artwork");
     if (claimed.error) return json({ error: "Could not identify unused uploads." }, 502);
-    const ids = claimed.data as string[];
-    if (!ids.length) return json({ removed: 0 });
-    const removed = await db.storage.from(artBucket).remove(ids.flatMap((id) => [`${id}/full.webp`, `${id}/thumb.webp`]));
+    const items = claimed.data as { id: string; keep_source: boolean; modern: boolean; card: boolean }[];
+    if (!items.length) return json({ removed: 0 });
+    const filenames = items.flatMap(({ id, keep_source, modern, card }) => [
+      `${id}/thumb.webp`, ...(modern || !keep_source ? [`${id}/full.webp`] : []), ...(card ? [`${id}/card.webp`] : []),
+    ]);
+    const removed = await db.storage.from(artBucket).remove(filenames);
     if (removed.error) return json({ error: "Storage cleanup failed. Run it again to resume." }, 502);
-    const finished = await db.from("assets").delete().eq("deleting", true).in("id", ids);
+    const finished = await db.rpc("finish_artwork_cleanup", { targets: items.map(({ id }) => id) });
     if (finished.error) return json({ error: "Cleanup could not finish. Run it again to resume." }, 502);
-    return json({ removed: ids.length });
+    return json({ removed: items.length });
   }
 
   let result;

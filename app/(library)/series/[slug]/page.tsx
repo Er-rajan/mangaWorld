@@ -14,7 +14,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!series) return {};
   const { title } = series;
   const description = series.description || (series.chapters.length ? `Read ${title} on ${siteName}.` : "Chapters coming soon.");
-  const image = series.cover_id ? artUrl(series.cover_id, "full") : series.hero ?? artUrl(null);
+  const image = series.cover_id ? artUrl(series.cover_id, "full") : series.hero_id ? artUrl(series.hero_id, "full") : series.hero ?? artUrl(null);
   return { title, description, alternates: { canonical: seriesLink(series) },
     openGraph: { title, description, images: [{ url: image, alt: `${title} artwork` }] } };
 }

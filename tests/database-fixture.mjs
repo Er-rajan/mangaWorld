@@ -10,11 +10,11 @@ export async function openDatabase() {
     create role service_role bypassrls;
     create schema storage;
     create table storage.buckets (id text primary key, name text, public boolean, file_size_limit bigint, allowed_mime_types text[]);
-    create table storage.objects (bucket_id text references storage.buckets(id), name text, primary key (bucket_id, name));
+    create table storage.objects (bucket_id text references storage.buckets(id), name text, metadata jsonb, primary key (bucket_id, name));
     grant usage on schema storage to service_role;
     grant all on all tables in schema storage to service_role;
   `);
-  for (const migration of ["001_nightfolio.sql", "002_series_extras.sql", "003_reels.sql"]) {
+  for (const migration of ["001_nightfolio.sql", "002_series_extras.sql", "003_reels.sql", "004_artwork_variants.sql"]) {
     await db.exec(await readFile(new URL("../supabase/migrations/" + migration, import.meta.url), "utf8"));
   }
   return db;

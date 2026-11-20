@@ -12,15 +12,15 @@ function featuredSeries(series: Series[]) {
   const configured = [...new Set((process.env.FEATURED_SERIES ?? "").split(",").map((slug) => slug.trim()).filter(Boolean))]
     .flatMap((slug) => series.filter((item) => item.slug === slug));
   if (configured.length) return configured;
-  const primary = series.find((entry) => entry.slug === featuredSlug) ?? series.find((entry) => entry.hero)
+  const primary = series.find((entry) => entry.slug === featuredSlug) ?? series.find((entry) => entry.hero_id || entry.hero)
     ?? series.find((entry) => entry.chapters.length) ?? series[0];
-  return primary ? [primary, ...series.filter((item) => item !== primary && item.hero)] : [];
+  return primary ? [primary, ...series.filter((item) => item !== primary && (item.hero_id || item.hero))] : [];
 }
 
 export async function generateMetadata(): Promise<Metadata> {
   const [featured] = featuredSeries((await library()).series);
   return { alternates: { canonical: "/" }, openGraph: { title: siteName, description: siteDescription,
-    images: [featured?.hero ?? (featured?.cover_id ? artUrl(featured.cover_id, "full") : siteBanner)], type: "website" } };
+    images: [featured?.hero_id ? artUrl(featured.hero_id, "full") : featured?.hero ?? (featured?.cover_id ? artUrl(featured.cover_id, "full") : siteBanner)], type: "website" } };
 }
 
 export default async function Home() {

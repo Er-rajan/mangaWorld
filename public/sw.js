@@ -21,7 +21,7 @@ function isChapter(url) {
 }
 
 function isArtwork(url) {
-  return /^(?:\/api\/art\/[a-f0-9-]+\/(?:full|thumb)|\/manga\/[a-z0-9-]+\/(?:chapter-[a-z0-9-]+\/)?(?:cover|page-\d+)(?:-preview)?\.webp)$/.test(url.pathname);
+  return /^(?:\/api\/art\/[a-f0-9-]+\/(?:full|thumb|card)|\/manga\/[a-z0-9-]+\/(?:chapter-[a-z0-9-]+\/)?(?:cover|page-\d+)(?:-preview|-card-\d+)?\.webp)$/.test(url.pathname);
 }
 
 function isBundle(url) {
@@ -79,9 +79,15 @@ self.addEventListener("fetch", (event) => {
   } else if (isArtwork(url)) {
     event.respondWith(fetch(request).catch(async () => {
       const key = navigationKey(url);
-      const full = key.replace(/\/thumb$/, "/full").replace(/-preview\.webp$/, ".webp");
+      const full = key.replace(/\/(?:thumb|card)$/, "/full").replace(/-(?:preview|card-\d+)\.webp$/, ".webp");
       return await caches.match(key) ?? (full === key ? undefined : await caches.match(full)) ?? Response.error();
     }));
+  } else if (url.pathname === "/_next/image") {
+    const source = url.searchParams.get("url");
+    if (!source?.startsWith("/manga/")) return;
+    const original = new URL(source, url.origin);
+    if (!isArtwork(original)) return;
+    event.respondWith(fetch(request).catch(async () => await caches.match(navigationKey(original)) ?? Response.error()));
   }
 });
 

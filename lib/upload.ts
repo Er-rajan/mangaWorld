@@ -1,6 +1,7 @@
 "use client";
 
 import type { PageArt } from "./types";
+import { artworkSpecs, type Artwork, type ArtworkKind, type ArtworkVariant, type Crop } from "./artwork";
 
 export const maxPages = 250;
 const maxSourceSize = 100 * 1024 * 1024;
@@ -42,15 +43,20 @@ function drawResized(source: CanvasImageSource, width: number, height: number, m
   return target;
 }
 
-export type Crop = { zoom: number; x: number; y: number };
 export const defaultCrop: Crop = { zoom: 1, x: 50, y: 50 };
 
-export function drawCover(target: HTMLCanvasElement, image: ImageBitmap, crop: Crop) {
-  const ratio = 2 / 3;
+export function coverFrame(image: ImageBitmap, crop: Crop, kind: ArtworkKind = "cover") {
+  const specification = artworkSpecs[kind];
+  const ratio = specification.width / specification.height;
   const width = Math.min(image.width, image.height * ratio) / crop.zoom;
   const height = width / ratio;
   const x = (image.width - width) * crop.x / 100;
   const y = (image.height - height) * crop.y / 100;
+  return { width, height, x, y, ratio };
+}
+
+export function drawCover(target: HTMLCanvasElement, image: ImageBitmap, crop: Crop, kind: ArtworkKind = "cover") {
+  const { width, height, x, y } = coverFrame(image, crop, kind);
   const context = target.getContext("2d", { alpha: false })!;
   context.fillStyle = "white";
   context.fillRect(0, 0, target.width, target.height);
@@ -59,21 +65,38 @@ export function drawCover(target: HTMLCanvasElement, image: ImageBitmap, crop: C
 }
 
 type Prepared = { full: Blob; thumb: Blob; width: number; height: number; filename: string };
+type PreparedCover = Omit<Prepared, "thumb"> & { artwork: Artwork; reused?: string; thumb?: Blob; card?: Blob; master?: Blob };
 
 async function prepareArtwork(full: HTMLCanvasElement, thumbnail: HTMLCanvasElement, filename: string): Promise<Prepared> {
-  let fullBlob = await webp(full, .87);
-  if (fullBlob.size > maximumWebP) fullBlob = await webp(full, .73);
+  let fullBlob = await webp(full, .93);
+  if (fullBlob.size > maximumWebP) fullBlob = await webp(full, .87);
   if (fullBlob.size > maximumWebP) throw new Error("This page is too large after compression.");
   return { full: fullBlob, thumb: await webp(thumbnail, .8),
     width: full.width, height: full.height, filename: Array.from(filename).slice(0, 200).join("") };
 }
 
-export async function prepareCover(image: ImageBitmap, crop: Crop, filename: string) {
-  const full = canvas(1000, 1500);
-  const thumb = canvas(400, 600);
-  drawCover(full, image, crop);
-  drawCover(thumb, image, crop);
-  return prepareArtwork(full, thumb, filename);
+export async function prepareCover(image: ImageBitmap, crop: Crop, filename: string, kind: ArtworkKind, reused?: string): Promise<PreparedCover> {
+  const frame = coverFrame(image, crop, kind);
+  const render = (limit: number) => {
+    const width = Math.max(1, Math.floor(Math.min(frame.width, limit)));
+    const result = canvas(width, width / frame.ratio);
+    drawCover(result, image, crop, kind);
+    return result;
+  };
+  const fullFrame = render(artworkSpecs[kind].width);
+  const full = await webp(fullFrame, .92);
+  const thumbWidth = Math.min(400, fullFrame.width);
+  const thumb = thumbWidth < fullFrame.width ? await webp(render(thumbWidth), .9) : undefined;
+  const cardWidth = kind === "hero" ? 1080 : 800;
+  const card = fullFrame.width > cardWidth ? await webp(render(cardWidth), .92) : undefined;
+  // The master is an uncropped WebP. Later crops reuse it by asset ID.
+  const master = reused ? undefined : await webp(drawResized(image, image.width, image.height, 3600, 3600), .96);
+  const files = [full, ...(thumb ? [thumb] : []), ...(card ? [card] : []), ...(master ? [master] : [])];
+  if (files.some((file) => file.size > maximumWebP)) throw new Error("This artwork exceeds the storage limit. Choose a smaller source file.");
+  const bytes = files.reduce((total, file) => total + file.size, 0);
+  return { full, thumb, card, master, width: fullFrame.width, height: fullFrame.height, filename, reused,
+    artwork: { kind, sourceWidth: image.width, sourceHeight: image.height, width: fullFrame.width, height: fullFrame.height,
+      thumb: thumbWidth, ...(card ? { card: cardWidth } : {}), blur: render(20).toDataURL("image/webp", .66), crop, bytes } };
 }
 
 export async function decodeImage(file: File) {
@@ -86,7 +109,7 @@ export async function decodeImage(file: File) {
 export async function prepareImage(file: File) {
   const image = await decodeImage(file);
   try {
-    return await prepareArtwork(drawResized(image, image.width, image.height, 1900, 4800),
+    return await prepareArtwork(drawResized(image, image.width, image.height, 2200, 6000),
       drawResized(image, image.width, image.height, 400, 950), file.name);
   } finally { image.close(); }
 }
@@ -110,7 +133,7 @@ export async function processFiles(files: File[], available: number,
       for (let index = 1; index <= document.numPages; index++) {
         const page = await document.getPage(index);
         const original = page.getViewport({ scale: 1 });
-        const viewport = page.getViewport({ scale: Math.min(1900 / original.width, 4200 / original.height) });
+        const viewport = page.getViewport({ scale: Math.min(2200 / original.width, 6000 / original.height) });
         const rendered = canvas(viewport.width, viewport.height);
         await page.render({ canvas: rendered, viewport }).promise;
         const thumb = drawResized(rendered, rendered.width, rendered.height, 400, 950);
@@ -152,19 +175,27 @@ function transfer(url: string, blob: Blob, name: string, progress: (part: number
   });
 }
 
-export async function uploadArtwork(image: Prepared, onProgress: (fraction: number) => void): Promise<PageArt> {
-  const { id, full, thumb } = await adminRequest<{ id: string; full: string; thumb: string }>({ action: "upload" });
-  const output = [0, 0];
-  const sizes = [image.full.size, image.thumb.size];
+export async function uploadArtwork(image: Prepared | PreparedCover, onProgress: (fraction: number) => void): Promise<PageArt> {
+  const cover = "artwork" in image ? image : undefined;
+  const signed = await adminRequest<{ id: string } & Partial<Record<ArtworkVariant, string>>>(cover
+    ? { action: "upload-cover", artwork: cover.artwork, reuse: cover.reused ?? null } : { action: "upload" });
+  const files: [ArtworkVariant, Blob][] = [["full", image.full]];
+  if (image.thumb) files.push(["thumb", image.thumb]);
+  if (cover?.card) files.push(["card", cover.card]);
+  if (cover?.master) files.push(["master", cover.master]);
+  const output = files.map(() => 0);
+  const total = files.reduce((sum, [, blob]) => sum + blob.size, 0);
   const track = (index: number) => (fraction: number) => {
-    output[index] = sizes[index] * fraction;
-    onProgress((output[0] + output[1]) / (sizes[0] + sizes[1]));
+    output[index] = files[index][1].size * fraction;
+    onProgress(output.reduce((sum, bytes) => sum + bytes, 0) / total);
   };
   // Let both transfers settle, so retrying cannot overlap an unfinished upload.
-  const results = await Promise.allSettled([
-    transfer(full, image.full, "full.webp", track(0)), transfer(thumb, image.thumb, "thumb.webp", track(1)),
-  ]);
+  const results = await Promise.allSettled(files.map(async ([variant, blob], index) => {
+    const url = signed[variant];
+    if (!url) throw new Error("Could not sign the artwork upload.");
+    await transfer(url, blob, `${variant}.webp`, track(index));
+  }));
   const failed = results.find((result) => result.status === "rejected");
   if (failed?.status === "rejected") throw failed.reason;
-  return { asset_id: id, width: image.width, height: image.height, filename: image.filename, alt: "" };
+  return { asset_id: signed.id, width: image.width, height: image.height, filename: image.filename, alt: "" };
 }

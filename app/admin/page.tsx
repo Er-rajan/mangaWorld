@@ -15,6 +15,7 @@ export default async function AdminPage() {
       <div><h1>Manage library</h1><p>Create series, upload chapters, and schedule releases.</p></div>
       <div className="form-actions">
         <Link className="button secondary" href="/admin/reels" prefetch={false}>Manage Reels</Link>
+        <Link className="button secondary" href="/admin/artwork" prefetch={false}>Re-process images</Link>
         <a className="button secondary" href="/api/admin/export"><Download size={18} /> Export metadata</a>
         <Link className="button primary" href="/admin/series/new"><Plus size={18} /> New series</Link>
       </div>

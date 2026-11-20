@@ -90,3 +90,28 @@ test("each visitor can like a published reel once and hidden reels stay private"
     await assert.rejects(reader("select visitor from public.reel_likes"), /permission denied/);
   } finally { await db.close(); }
 });
+
+test("artwork reprocessing retains the legacy source and enforces the storage ceiling", async () => {
+  const db = await openDatabase();
+  const admin = (sql, args) => asRole(db, "service_role", (tx) => tx.query(sql, args));
+  try {
+    const cover = randomUUID();
+    await admin("insert into public.assets (id) values ($1)", [cover]);
+    await admin("insert into storage.objects values ('manga-art', $1), ('manga-art', $2)", [`${cover}/full.webp`, `${cover}/thumb.webp`]);
+    const series = { title: "Retained cover", status: "ongoing", description: "", tags: [], cover_id: cover };
+    const target = (await admin("select public.save_series($1, null, 0) as id", [series])).rows[0].id;
+    const info = { width: 341, thumb: 341, bytes: 1500 };
+    const newCover = (await admin("select public.reserve_cover_art($1, $2) as id", [info, cover])).rows[0].id;
+    await admin("insert into storage.objects values ('manga-art', $1)", [`${newCover}/full.webp`]);
+    await admin("select public.save_series($1, $2, 1)", [{ ...series, cover_id: newCover }, target]);
+    await admin("update public.assets set created_at = now() - interval '4 hours' where id = $1", [cover]);
+    assert.deepEqual((await admin("select public.claim_unused_art() as id")).rows, []);
+    assert.deepEqual((await admin("select * from public.claim_unused_artwork()")).rows, [{ id: cover, keep_source: true, modern: false, card: false }]);
+    await admin("delete from storage.objects where name = $1", [`${cover}/thumb.webp`]);
+    await admin("select public.finish_artwork_cleanup($1)", [[cover]]);
+    assert.deepEqual((await admin("select name from storage.objects where name like $1", [`${cover}/%`])).rows, [{ name: `${cover}/full.webp` }]);
+    assert.deepEqual((await admin("select archived from public.assets where id = $1", [cover])).rows, [{ archived: true }]);
+    await admin("insert into storage.objects values ('manga-art', 'quota-test', '{\"size\":900000000}')");
+    await assert.rejects(admin("select public.reserve_cover_art($1, null)", [info]), /storage is near the free-tier limit/);
+  } finally { await db.close(); }
+});
