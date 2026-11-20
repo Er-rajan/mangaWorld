@@ -34,6 +34,9 @@ test("migration applies and schedules release, with draft metadata and art prote
     assert.deepEqual((await reader("select id from public.chapters")).rows, []);
     assert.deepEqual((await reader("select asset_id from public.chapter_pages")).rows, []);
     assert.deepEqual((await reader("select id from public.assets")).rows, []);
+    const schedule = (await reader("select * from public.next_chapter_release($1)", [series])).rows[0];
+    assert.equal(Number(schedule.number), 1);
+    assert.equal(new Date(schedule.release_at).toISOString(), payload.release_at);
     assert.deepEqual((await admin("select * from public.track_chapter($1, $2, 'view', false)", [target, visitor])).rows, []);
     await assert.rejects(reader("insert into public.series (title) values ('Unauthorised')"), /permission denied/);
     await assert.rejects(reader("select public.export_library()"), /permission denied/);
@@ -57,6 +60,10 @@ test("migration applies and schedules release, with draft metadata and art prote
     await save({ ...payload, pages: [], published: false }, target, 1);
     assert.deepEqual((await reader("select id from public.chapters")).rows, []);
     await admin("update public.assets set created_at = now() - interval '4 hours' where id = $1", [asset]);
+    await admin("update public.site_settings set characters = $1 where id = 1", [JSON.stringify([{ name: "Test portrait", image_id: asset }])]);
+    assert.deepEqual((await reader("select id from public.assets")).rows, [{ id: asset }]);
+    assert.deepEqual((await admin("select public.claim_unused_art() as id")).rows, []);
+    await admin("update public.site_settings set characters = '[]' where id = 1");
     assert.deepEqual((await admin("select public.claim_unused_art() as id")).rows, [{ id: asset }]);
     await assert.rejects(save(payload, target, 2), /Artwork upload incomplete or expired/);
     await admin("select public.delete_entry('chapter', $1, 2)", [target]);

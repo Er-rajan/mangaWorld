@@ -15,21 +15,27 @@ const action = z.discriminatedUnion("operation", [
   z.object({ operation: z.literal("delete-category"), id }),
 ]);
 
+const json = (data: object, status = 200) => Response.json(data, { status, headers: { "Cache-Control": "private, no-store" } });
+
 export async function POST(request: Request) {
   if (!sameOrigin(request)) return new Response(null, { status: 403 });
-  if (!await isAdmin()) return Response.json({ error: "Sign in to manage Reels." }, { status: 401 });
-  const parsed = action.safeParse(await request.json().catch(() => null));
-  if (!parsed.success) return Response.json({ error: "Check the title, category, tags, and link." }, { status: 400 });
+  if (!await isAdmin()) return json({ error: "Sign in to manage Reels." }, 401);
+  const content = await request.text();
+  if (content.length > 12_000) return json({ error: "Reel metadata is too large." }, 413);
+  let payload: unknown;
+  try { payload = JSON.parse(content); } catch { return json({ error: "Invalid JSON." }, 400); }
+  const parsed = action.safeParse(payload);
+  if (!parsed.success) return json({ error: "Check the title, category, tags, and link." }, 400);
   const body = parsed.data;
   const { operation } = body;
   const youtube_id = operation === "save" ? youtubeVideoId(body.youtube) : undefined;
-  if (operation === "save" && !youtube_id) return Response.json({ error: "Paste a valid HTTPS YouTube video or Shorts link." }, { status: 400 });
+  if (operation === "save" && !youtube_id) return json({ error: "Paste a valid HTTPS YouTube video or Shorts link." }, 400);
   const { error } = await database(true).rpc("mutate_reels", { operation, payload: { ...body, youtube_id } });
   if (error) {
     const message = error.code === "23503" ? "Check the category or reassign its reels before deleting it."
       : error.code === "23505" ? "That category name is already in use."
         : error.code === "22023" ? error.message : "Couldn’t save that change. Check the Reels migration and try again.";
-    return Response.json({ error: message }, { status: 409 });
+    return json({ error: message }, 409);
   }
-  return Response.json({ ok: true });
+  return json({ ok: true });
 }
