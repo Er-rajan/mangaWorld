@@ -1,5 +1,6 @@
 import { expect, test, devices } from "@playwright/test";
 import { artUrl, chapterArt, chapterLink } from "../lib/format";
+import { themes } from "../lib/themes";
 import type { Series } from "../lib/types";
 
 const site = "http://127.0.0.1:3211";
@@ -43,15 +44,17 @@ test("Manga World branding, author, footer Instagram and persistent themes", asy
   const picker = page.getByRole("combobox", { name: "Site theme" });
   await expect(picker).toHaveValue("fox");
   await expect(page.locator("body")).toHaveCSS("background-color", "rgb(28, 22, 18)");
-  for (const [theme, color] of [["rabbit", "rgb(246, 242, 250)"], ["owl", "rgb(16, 23, 35)"], ["fox", "rgb(28, 22, 18)"]]) {
+  const heroColors = new Set<string>();
+  const buttonColors = new Set<string>();
+  for (const theme of Object.keys(themes)) {
     await picker.selectOption(theme);
     await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
-    await expect(page.locator("body")).toHaveCSS("background-color", color);
+    heroColors.add(await page.locator(".hero").evaluate((hero) => getComputedStyle(hero).backgroundColor));
+    buttonColors.add(await page.locator(".hero-actions .primary").evaluate((button) => getComputedStyle(button).backgroundColor));
   }
-  for (const theme of ["sakura", "ink", "light", "dark", "sakura"]) {
-    await picker.selectOption(theme);
-    await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
-  }
+  expect(heroColors.size).toBe(Object.keys(themes).length);
+  expect(buttonColors.size).toBe(Object.keys(themes).length);
+  await picker.selectOption("sakura");
   await page.reload();
   await expect(picker).toHaveValue("sakura");
   await expect(page.locator("html")).toHaveAttribute("data-theme", "sakura");
@@ -59,6 +62,28 @@ test("Manga World branding, author, footer Instagram and persistent themes", asy
   await expect(page.getByRole("heading", { name: "Rajan", exact: true })).toBeVisible();
   const manifest = await (await request.get(starter + "/manifest.webmanifest")).json();
   expect(manifest.name).toBe("Manga World");
+});
+
+test("mobile reader follows the site theme with an optional fixed background", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(site + "/read/the-drowned-city/chapter-1");
+  const stage = page.locator(".reader-stage");
+  await expect(stage).toHaveCSS("background-color", "rgb(28, 22, 18)");
+  await page.getByRole("button", { name: "Reader settings" }).click();
+  const settings = page.getByRole("dialog", { name: "Reader settings" });
+  const theme = settings.getByRole("combobox", { name: "Site theme" });
+  const background = settings.getByRole("combobox", { name: "Background" });
+  await expect(background).toHaveValue("theme");
+  await theme.selectOption("rabbit");
+  await expect(stage).toHaveCSS("background-color", "rgb(246, 242, 250)");
+  await background.selectOption("paper");
+  await theme.selectOption("owl");
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "owl");
+  await expect(stage).toHaveCSS("background-color", "rgb(223, 217, 210)");
+  await background.selectOption("theme");
+  await expect(stage).toHaveCSS("background-color", "rgb(16, 23, 35)");
+  await page.reload();
+  await expect(stage).toHaveCSS("background-color", "rgb(16, 23, 35)");
 });
 
 test("Rajan Chapter 1 opens page by page and includes all ten PDF pages in order", async ({ page }) => {

@@ -3,7 +3,7 @@
 import { Bookmark, BookOpen, Check, ChevronLeft, ChevronRight, Clock3, Download, Expand, Maximize, Minimize, PanelTop, Settings2, X } from "lucide-react";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { artUrl, numberLabel } from "@/lib/format";
-import { getLocal, rememberProgress, setLocal, useLocal, type PageTransition, type ReaderPrefs, type SavedPage } from "@/lib/local";
+import { defaultReader, getLocal, rememberProgress, setLocal, useLocal, type PageTransition, type ReaderPrefs, type SavedPage } from "@/lib/local";
 import type { Chapter, Direction, PageArt, ReaderLayout, ReaderMode } from "@/lib/types";
 import { ThemePicker } from "./theme";
 import { ChapterComments } from "./chapter-comments";
@@ -15,8 +15,6 @@ import { PageScrubber, useReaderChrome } from "./reader-chrome";
 
 type Props = { series: string; seriesUrl: string; path: string; chapter: Chapter; next?: string; prev?: string;
   nextArtwork: string[]; upcoming?: number; reactionsAvailable: boolean; watermark: string; commentsEnabled: boolean; defaultLayout?: ReaderLayout };
-
-const backgrounds = { ink: "#0c0b10", gray: "#323039", paper: "#dfd9d2", black: "#000" };
 
 function ChapterNav({ prev, next, seriesUrl, upcoming }: Pick<Props, "prev" | "next" | "seriesUrl" | "upcoming">) {
   return <nav className="chapter-nav" aria-label="Chapter navigation">
@@ -36,6 +34,7 @@ export function Reader({ series, seriesUrl, path, chapter, next, prev, nextArtwo
   const total = chapter.pages.length;
   const minimum = chapter.cover_id ? 0 : 1;
   const prefs = useLocal("prefs");
+  const background = prefs.background ?? defaultReader.background;
   const seriesLayouts = useLocal("seriesLayouts");
   const layout = defaultLayout ? seriesLayouts[seriesUrl] ?? defaultLayout : prefs;
   const bookmarks = useLocal("bookmarks");
@@ -390,7 +389,7 @@ export function Reader({ series, seriesUrl, path, chapter, next, prev, nextArtwo
       <progress value={progress} max="1" className="reader-progress" aria-label="Chapter progress" />
     </div>
 
-    <div className="reader-stage" style={{ background: backgrounds[prefs.background] }}>
+    <div className="reader-stage" data-background={background}>
       <div className={`reader-layout ${mode} ${mode === "spread" && rtl ? "reader-rtl" : ""} ${scale > 1 ? "is-zoomed" : ""}`}
         ref={pageLayout} tabIndex={-1} data-transition={transition}
         style={{ "--reader-scale": scale, "--reader-brightness": prefs.brightness / 100,
@@ -487,8 +486,9 @@ export function Reader({ series, seriesUrl, path, chapter, next, prev, nextArtwo
           onChange={(event) => changePrefs({ brightness: Number(event.target.value) })} /></label>
         <label>Zoom <span>{prefs.zoom}%</span><input type="range" min="75" max="225" step="5" value={prefs.zoom}
           onChange={(event) => { setZoomed(false); changePrefs({ zoom: Number(event.target.value) }); }} /></label>
-        <label>Background<select value={prefs.background} onChange={(event) => changePrefs({ background: event.target.value as ReaderPrefs["background"] })}>
-          <option value="ink">Ink black</option><option value="black">Pure black</option><option value="gray">Slate gray</option><option value="paper">Warm paper</option>
+        <label>Background<select value={background} onChange={(event) => changePrefs({ background: event.target.value as ReaderPrefs["background"] })}>
+          <option value="theme">Match site theme</option><option value="ink">Ink black</option><option value="black">Pure black</option>
+          <option value="gray">Slate gray</option><option value="paper">Warm paper</option>
         </select></label>
         <label className="checkbox-label"><input type="checkbox" checked={prefs.warm ?? false}
           onChange={(event) => changePrefs({ warm: event.target.checked })} /> Warm artwork filter</label>

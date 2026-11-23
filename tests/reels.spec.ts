@@ -45,6 +45,8 @@ test("admin publishes and orders Reels, and the mobile feed plays one clip and s
     await expect(page.getByText("Private cut")).toHaveCount(0);
     await expect(page.locator(".reel-feed iframe")).toHaveCount(1);
     await expect(page.locator(".reel-feed iframe")).toHaveAttribute("src", /youtube-nocookie\.com\/embed\/M7lc1UVf-VE/);
+    await page.getByRole("combobox", { name: "Site theme" }).selectOption("rabbit");
+    await expect(page.locator(".reel-placeholder")).toHaveCSS("background-color", "rgb(241, 234, 247)");
     await page.getByRole("button", { name: "Unmute", exact: true }).click();
     await expect(page.getByRole("button", { name: "Mute", exact: true })).toBeVisible();
     const card = page.locator(".reel-slide").first();
