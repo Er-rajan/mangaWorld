@@ -91,6 +91,49 @@ test("each visitor can like a published reel once and hidden reels stay private"
   } finally { await db.close(); }
 });
 
+test("chapter comments respect release status, stay isolated by chapter, and accept safe retries", async () => {
+  const db = await openDatabase();
+  const admin = (sql, args) => asRole(db, "service_role", (tx) => tx.query(sql, args));
+  const reader = (sql, args) => asRole(db, "anon", (tx) => tx.query(sql, args));
+  try {
+    const series = (await admin("insert into public.series (slug, title) values ('comments-fixture', 'Comments fixture') returning id")).rows[0].id;
+    const chapter = (await admin("insert into public.chapters (series_id, number, title) values ($1, 1, 'Draft') returning id", [series])).rows[0].id;
+    const path = `/read/comments-fixture/${chapter}`;
+    const bundled = "/read/the-drowned-city/chapter-1";
+    const key = randomUUID();
+    const post = (path, id, request = randomUUID(), body = "Loved it!") => admin(
+      "select * from public.post_chapter_comment($1, $2, $3, 'A reader', $4, 'fixture-source')", [path, id, request, body]);
+    const list = (path, id, before = null, size = 20) => admin("select * from public.list_chapter_comments($1,$2,$3,$4)", [path, id, before, size]);
+
+    await assert.rejects(post(path, chapter), { code: "PT404" });
+    await admin("update public.chapters set published = true, release_at = now() + interval '1 minute' where id = $1", [chapter]);
+    await assert.rejects(post(path, chapter), { code: "PT404" });
+    await admin("update public.chapters set release_at = now() where id = $1", [chapter]);
+    const first = (await post(path, chapter, key)).rows[0];
+    assert.deepEqual((await post(path, chapter, key)).rows, [first]);
+    await assert.rejects(post(path, chapter, key, "Different comment"), { code: "PT409" });
+    const second = (await post(path, chapter)).rows[0];
+    await post(bundled, null);
+    await post(bundled, null);
+    await post(bundled, null);
+    await assert.rejects(post(bundled, null), { code: "PT429" });
+    assert.deepEqual((await list(path, chapter, null, 1)).rows, [second]);
+    assert.deepEqual((await list(path, chapter, second.id)).rows, [first]);
+    assert.equal((await list(bundled, null)).rows.length, 3);
+    await assert.rejects(reader("select * from public.chapter_comments"), /permission denied/);
+    await assert.rejects(reader("select * from public.list_chapter_comments($1, $2, null, 20)", [path, chapter]), /permission denied/);
+
+    await admin("update public.site_settings set comments = false where id = 1");
+    assert.deepEqual((await list(bundled, null)).rows, []);
+    await assert.rejects(post(bundled, null), { code: "PT404" });
+    await admin("update public.site_settings set comments = true where id = 1");
+    await admin("update public.chapters set published = false where id = $1", [chapter]);
+    assert.deepEqual((await list(path, chapter)).rows, []);
+    await admin("delete from public.chapters where id = $1", [chapter]);
+    assert.deepEqual((await admin("select id from public.chapter_comments where chapter_path = $1", [path])).rows, []);
+  } finally { await db.close(); }
+});
+
 test("artwork reprocessing retains the legacy source and enforces the storage ceiling", async () => {
   const db = await openDatabase();
   const admin = (sql, args) => asRole(db, "service_role", (tx) => tx.query(sql, args));

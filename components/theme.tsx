@@ -1,9 +1,11 @@
 "use client";
 
-import { ChevronDown, Palette } from "lucide-react";
+import { ChevronDown, Feather, Palette, PawPrint, Rabbit } from "lucide-react";
 import { useEffect } from "react";
 import { getLocal, setLocal, useLocal } from "@/lib/local";
-import { resolveTheme, themes } from "@/lib/themes";
+import { animalThemes, classicThemes, resolveTheme, themes, type Theme } from "@/lib/themes";
+
+const themeIcons: Partial<Record<Theme, typeof Palette>> = { fox: PawPrint, rabbit: Rabbit, owl: Feather };
 
 export function ThemeSync() {
   const theme = useLocal("theme");
@@ -17,12 +19,18 @@ export function ThemeSync() {
 
 export function ThemePicker({ compact = false }: { compact?: boolean }) {
   const theme = useLocal("theme");
+  const Icon = themeIcons[theme] ?? Palette;
   return <label className={compact ? "theme-picker compact" : "theme-picker"}>
-    <Palette size={18} aria-hidden="true" />
+    <Icon size={18} aria-hidden="true" />
     <select aria-label="Site theme" title="Site theme" value={theme} onChange={(event) => {
       setLocal("theme", resolveTheme(event.target.value));
     }}>
-      {Object.entries(themes).map(([value, item]) => <option value={value} key={value}>{item.label}</option>)}
+      <optgroup label="Animal themes">
+        {Object.entries(animalThemes).map(([value, item]) => <option value={value} key={value}>{item.label}</option>)}
+      </optgroup>
+      <optgroup label="Classic themes">
+        {Object.entries(classicThemes).map(([value, item]) => <option value={value} key={value}>{item.label}</option>)}
+      </optgroup>
     </select>
     <ChevronDown size={14} aria-hidden="true" />
   </label>;

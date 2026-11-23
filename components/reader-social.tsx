@@ -1,17 +1,13 @@
 "use client";
 
-import Giscus from "@giscus/react";
-import { Copy, Eye, Heart, MessageCircle, Share2, X } from "lucide-react";
+import { Copy, Eye, Heart, Share2, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { getLocal, setLocal, useLocal, visitorId } from "@/lib/local";
-import { themes } from "@/lib/themes";
-
-export type Comments = { repo: string; repoId: string; category: string; categoryId: string };
 
 type Stats = { views: number; likes: number; liked?: boolean };
 
-export function ReaderSocial({ id, path, title, comments, initial, reactionsAvailable }: {
-  id: string; path: string; title: string; comments?: Comments; initial: Stats; reactionsAvailable: boolean;
+export function ReaderSocial({ id, path, title, initial, reactionsAvailable }: {
+  id: string; path: string; title: string; initial: Stats; reactionsAvailable: boolean;
 }) {
   const [stats, setStats] = useState(initial);
   const [busy, setBusy] = useState(false);
@@ -19,7 +15,6 @@ export function ReaderSocial({ id, path, title, comments, initial, reactionsAvai
   const [shareUrl, setShareUrl] = useState("");
   const likes = useLocal("likes");
   const liked = likes.includes(path);
-  const theme = useLocal("theme");
   const dialog = useRef<HTMLDialogElement>(null);
   const changedReaction = useRef(false);
 
@@ -88,9 +83,5 @@ export function ReaderSocial({ id, path, title, comments, initial, reactionsAvai
       <input value={shareUrl} readOnly aria-label="Chapter link" onFocus={(event) => event.target.select()} />
       <p aria-live="polite">{message}</p>
     </dialog>
-    {comments && <details className="comments"><summary><MessageCircle size={19} /> Comments</summary>
-      <Giscus repo={comments.repo as `${string}/${string}`} repoId={comments.repoId} category={comments.category}
-        categoryId={comments.categoryId} mapping="pathname" strict="1" reactionsEnabled="0" loading="lazy" theme={themes[theme].light ? "light" : "dark"} />
-    </details>}
   </>;
 }

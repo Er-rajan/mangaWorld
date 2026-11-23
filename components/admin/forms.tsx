@@ -147,7 +147,7 @@ function DeleteEntry({ kind, id, revision, label, disabled, onBusy, onError }: {
   }}><Trash2 size={17} /> Delete {kind}</button>;
 }
 
-export function SettingsForm({ settings, commentsConfigured }: { settings: Settings; commentsConfigured: boolean }) {
+export function SettingsForm({ settings }: { settings: Settings }) {
   const [message, setMessage] = useState("");
   const [cleanup, setCleanup] = useState("");
   const [busy, setBusy] = useState(false);
@@ -196,8 +196,7 @@ export function SettingsForm({ settings, commentsConfigured }: { settings: Setti
       </details>
       <label className="checkbox-label"><input name="watermark" type="checkbox" defaultChecked={settings.watermark} /> Display author name over reader images</label>
       <p className="muted">The watermark is a visual overlay. It doesn’t prevent copying.</p>
-      <label className="checkbox-label"><input name="comments" type="checkbox" defaultChecked={settings.comments} /> Enable Giscus comments</label>
-      {!commentsConfigured && <p className="muted">Set the Giscus environment variables to show comments in the reader.</p>}
+      <label className="checkbox-label"><input name="comments" type="checkbox" defaultChecked={settings.comments} /> Enable public chapter comments</label>
       <button className="button primary" disabled={busy}><Save size={17} /> Save settings</button>
       <p className="muted" aria-live="polite">{message}</p>
     </form>

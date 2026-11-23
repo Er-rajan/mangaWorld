@@ -6,14 +6,15 @@ import { artUrl, numberLabel } from "@/lib/format";
 import { getLocal, rememberProgress, setLocal, useLocal, type PageTransition, type ReaderPrefs, type SavedPage } from "@/lib/local";
 import type { Chapter, Direction, PageArt, ReaderLayout, ReaderMode } from "@/lib/types";
 import { ThemePicker } from "./theme";
-import { ReaderSocial, type Comments } from "./reader-social";
+import { ChapterComments } from "./chapter-comments";
+import { ReaderSocial } from "./reader-social";
 import { useOfflineChapter } from "./offline";
 import { ReaderArtwork } from "./reader-artwork";
 import { ResponsiveArt } from "./responsive-art";
 import { PageScrubber, useReaderChrome } from "./reader-chrome";
 
 type Props = { series: string; seriesUrl: string; path: string; chapter: Chapter; next?: string; prev?: string;
-  nextArtwork: string[]; upcoming?: number; reactionsAvailable: boolean; watermark: string; comments?: Comments; defaultLayout?: ReaderLayout };
+  nextArtwork: string[]; upcoming?: number; reactionsAvailable: boolean; watermark: string; commentsEnabled: boolean; defaultLayout?: ReaderLayout };
 
 const backgrounds = { ink: "#0c0b10", gray: "#323039", paper: "#dfd9d2", black: "#000" };
 
@@ -31,7 +32,7 @@ function canPreload() {
   return navigator.onLine && !connection?.saveData && !connection?.effectiveType?.endsWith("2g");
 }
 
-export function Reader({ series, seriesUrl, path, chapter, next, prev, nextArtwork, upcoming, reactionsAvailable, watermark, comments, defaultLayout }: Props) {
+export function Reader({ series, seriesUrl, path, chapter, next, prev, nextArtwork, upcoming, reactionsAvailable, watermark, commentsEnabled, defaultLayout }: Props) {
   const total = chapter.pages.length;
   const minimum = chapter.cover_id ? 0 : 1;
   const prefs = useLocal("prefs");
@@ -459,8 +460,9 @@ export function Reader({ series, seriesUrl, path, chapter, next, prev, nextArtwo
         <div><h2>End of chapter</h2><p>Thanks for reading {chapter.title}.</p></div>
         {nav}
       </div> : nav}
-      <ReaderSocial id={chapter.id} path={path} title={`${series} · ${chapter.title}`} comments={comments} reactionsAvailable={reactionsAvailable}
+      <ReaderSocial id={chapter.id} path={path} title={`${series} · ${chapter.title}`} reactionsAvailable={reactionsAvailable}
         initial={{ views: chapter.views, likes: chapter.likes }} />
+      {commentsEnabled && <ChapterComments key={path} path={path} />}
     </section>
 
     {total > 0 && <div className="reader-bottom reader-chrome">

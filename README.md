@@ -12,7 +12,7 @@ Manga World is Rajan’s personal manga library with a public reader and a singl
 ## Set up Supabase Free
 
 1. In the [Supabase dashboard](https://supabase.com/dashboard), create a project in a **Free** organization. Pick a region near your readers if they are concentrated in one area.
-2. In SQL Editor, run `supabase/migrations/001_nightfolio.sql`, `002_series_extras.sql`, `003_reels.sql`, and `004_artwork_variants.sql` in order on a new project. Migration `001` creates the catalogue and private `manga-art` bucket. Run `supabase/seed.sql` to add editable entries for the two bundled series. Under Storage, verify the bucket is private and accepts WebP. Its file limit is 8,000,000 bytes per converted object.
+2. In SQL Editor, run the files in `supabase/migrations/` from `001_nightfolio.sql` through `005_chapter_comments.sql` in order on a new project. Migration `001` creates the catalogue and private `manga-art` bucket. Run `supabase/seed.sql` to add editable entries for the two bundled series. Under Storage, verify the bucket is private and accepts WebP. Its file limit is 8,000,000 bytes per converted object.
 3. In **Connect** or **Project Settings → API Keys**, copy the project URL, the publishable key and the secret key. Set `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` and `SUPABASE_SECRET_KEY`. The legacy anon and service-role keys also work in the corresponding slots. Keep the secret key server-side.
 4. Set `ADMIN_USERNAME` and a unique `ADMIN_PASSWORD` at least 16 characters long. Generate a session secret with `node -e "console.log(require('node:crypto').randomBytes(48).toString('hex'))"` and set `ADMIN_SESSION_SECRET`. Keep `.env.local` out of Git. Rotating the admin username, password, or session secret invalidates existing sessions.
 
@@ -26,6 +26,7 @@ Manga World is Rajan’s personal manga library with a public reader and a singl
 | `assets` | Storage references and cleanup state |
 | `site_settings` | Author bio, optional character profiles, watermark and comments preferences |
 | `chapter_visitors` and `login_attempts` | Private reaction and login rate-limit state |
+| `chapter_comments` and `comment_attempts` | Public reader comments served by the app and private posting rate-limit state |
 
 Chapter metadata, images and reactions are available publicly only when the chapter is marked **Published** and its release timestamp is due. Postgres evaluates the timestamp on each new request. The application issues exact-path signed upload URLs after admin authentication and redirects authorized image reads to short-lived signed downloads. Storage receives the image bytes directly in both directions. Postgres saves the page order and chapter metadata in one transaction after checking uploaded files. The browser associates views and likes with a random local identifier. Views are counted once per chapter, browser and UTC day.
 
@@ -84,7 +85,7 @@ On an existing project, apply any pending migrations in numeric order through `0
 
 Use the browser’s **Install app** or **Add to Home Screen** control where available. Open a chapter online and wait for **Available offline** in **Reader settings**. Reopen the chapter directly or from a bookmark or reading history under **My shelf**. The service worker keeps up to three chapters on the device, subject to browser storage availability. Offline preparation downloads the chapter’s images once. Reader preferences, the current page and vertical scroll position, bookmarks and followed series live in localStorage.
 
-For optional comments, enable **Discussions** in a public GitHub repository, install the Giscus app for it, and use [giscus.app](https://giscus.app/) to populate the four `GISCUS_*` variables. Then turn on **Enable Giscus comments** under **Site settings**. Commenters sign in to GitHub. The author name, bio and optional reader watermark are also editable there. Add entries under **Character profiles** to make the profiles page available from About.
+Readers can open **Chapter comments** at the end of a chapter and post with a display name and a comment. Posts are public and stored in Supabase. For an existing deployment, apply `005_chapter_comments.sql` before deploying the updated reader. The migration turns comments on, and the author can toggle **Enable public chapter comments** under **Site settings**. Any previous Giscus discussions remain in GitHub Discussions. The author name, bio and optional reader watermark are also editable under **Site settings**. Add entries under **Character profiles** to make the profiles page available from About.
 
 ## Project structure and verification
 

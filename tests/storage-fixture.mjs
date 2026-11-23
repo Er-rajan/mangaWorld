@@ -15,6 +15,8 @@ const rpc = {
   next_chapter_release: ["series"],
   mutate_reels: ["operation", "payload"], react_to_reel: ["target", "browser", "desired"],
   reserve_cover_art: ["info", "reuse"], claim_unused_artwork: [], finish_artwork_cleanup: ["targets"], artwork_usage: [],
+  list_chapter_comments: ["thread_path", "target", "before_id", "page_size"],
+  post_chapter_comment: ["thread_path", "target", "request_key", "display_name", "comment_body", "source_key"],
 };
 
 async function seedReader() {
@@ -113,7 +115,8 @@ const server = createServer(async (req, res) => {
       const body = JSON.parse((await read(req)).toString());
       const placeholders = rpc[name].map((_, i) => "$" + (i + 1)).join(",");
       const args = rpc[name].map((key) => body[key]);
-      const set = ["track_chapter", "claim_unused_art", "next_chapter_release", "react_to_reel", "claim_unused_artwork"].includes(name);
+      const set = ["track_chapter", "claim_unused_art", "next_chapter_release", "react_to_reel", "claim_unused_artwork",
+        "list_chapter_comments", "post_chapter_comment"].includes(name);
       const rows = (await query(`select ${set ? "* from " : ""}public.${name}(${placeholders})${set ? "" : " as value"}`, args)).rows;
       return respond(res, 200, set ? (name === "claim_unused_art" ? rows.map((row) => row[name]) : rows) : rows[0].value);
     }

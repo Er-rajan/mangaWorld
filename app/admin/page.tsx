@@ -9,7 +9,6 @@ import { latestBundledChapterNumber } from "@/lib/bundled-chapters";
 export default async function AdminPage() {
   if (!await isAdmin()) return <main id="main" className="login-page site-width"><AdminLogin enabled={adminConfigured()} /></main>;
   const { series, settings } = await library(true);
-  const commentsConfigured = Boolean(process.env.GISCUS_REPO && process.env.GISCUS_REPO_ID && process.env.GISCUS_CATEGORY && process.env.GISCUS_CATEGORY_ID);
   return <main id="main" className="site-width admin-content">
     <div className="split-heading admin-title">
       <div><h1>Manage library</h1><p>Create series, upload chapters, and schedule releases.</p></div>
@@ -46,6 +45,6 @@ export default async function AdminPage() {
           : "This series has no chapters yet."}</p>}
       </section>;
     })}</div> : <p className="empty-box">Create your first series to start uploading chapters.</p>}
-    <SettingsForm settings={settings} commentsConfigured={commentsConfigured} />
+    <SettingsForm settings={settings} />
   </main>;
 }

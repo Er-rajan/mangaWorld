@@ -41,6 +41,13 @@ test("Manga World branding, author, footer Instagram and persistent themes", asy
   await expect(page.locator("footer").getByRole("link", { name: /Instagram.*@ur\.rajan/ }))
     .toHaveAttribute("href", "https://www.instagram.com/ur.rajan/");
   const picker = page.getByRole("combobox", { name: "Site theme" });
+  await expect(picker).toHaveValue("fox");
+  await expect(page.locator("body")).toHaveCSS("background-color", "rgb(28, 22, 18)");
+  for (const [theme, color] of [["rabbit", "rgb(246, 242, 250)"], ["owl", "rgb(16, 23, 35)"], ["fox", "rgb(28, 22, 18)"]]) {
+    await picker.selectOption(theme);
+    await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
+    await expect(page.locator("body")).toHaveCSS("background-color", color);
+  }
   for (const theme of ["sakura", "ink", "light", "dark", "sakura"]) {
     await picker.selectOption(theme);
     await expect(page.locator("html")).toHaveAttribute("data-theme", theme);

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Reader } from "@/components/reader";
 import { artUrl, chapterArt, chapterLink } from "@/lib/format";
-import { getChapter, library } from "@/lib/db";
+import { getChapter, hasDatabase, library } from "@/lib/db";
 import { authorName } from "@/lib/brand";
 import { upcomingDrownedCityChapter } from "@/lib/drowned-city";
 import { bundledChapter } from "@/lib/bundled-chapters";
@@ -30,16 +30,12 @@ export default async function ChapterPage({ params }: Props) {
   if (!chapter || !series) notFound();
   const index = series.chapters.findIndex((entry) => entry.id === id);
   const nextChapter = series.chapters[index + 1];
-  const giscus = {
-    repo: process.env.GISCUS_REPO ?? "", repoId: process.env.GISCUS_REPO_ID ?? "",
-    category: process.env.GISCUS_CATEGORY ?? "", categoryId: process.env.GISCUS_CATEGORY_ID ?? "",
-  };
-  const comments = data.settings.comments && Object.values(giscus).every(Boolean) ? giscus : undefined;
   return <Reader key={id} series={series.title} seriesUrl={`/series/${series.slug}`} path={chapterLink(series, chapter)}
     chapter={chapter} prev={index > 0 ? chapterLink(series, series.chapters[index - 1]) : undefined}
     next={nextChapter ? chapterLink(series, nextChapter) : undefined}
     nextArtwork={[nextChapter?.cover_id, nextChapter?.first_page].flatMap((asset) => asset ? [artUrl(asset, "full")] : [])}
     upcoming={upcomingDrownedCityChapter(series)} reactionsAvailable={!bundledChapter(slug, id)}
     defaultLayout={slug === rajanSlug ? { mode: "single", direction: "ltr" } : undefined}
-    watermark={data.settings.watermark ? data.settings.author || authorName : ""} comments={comments} />;
+    watermark={data.settings.watermark ? data.settings.author || authorName : ""}
+    commentsEnabled={hasDatabase && data.settings.comments} />;
 }
